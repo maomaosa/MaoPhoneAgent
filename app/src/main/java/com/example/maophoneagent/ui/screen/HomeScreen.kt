@@ -1,0 +1,192 @@
+/*
+ * File: HomeScreen.kt
+ * Module: ui.screen
+ *
+ * Description:
+ * Provides a test screen for basic phone interactions.
+ * Allows users to enter tap coordinates, request a predefined swipe,
+ * and trigger Android Back and Home navigation actions.
+ * Displays accessibility service connection status and provides
+ * a shortcut to system settings for enabling the service.
+ *
+ * Delegates action requests to PhoneViewModel and displays
+ * the current execution status observed with lifecycle awareness.
+ * Phone action controls are enabled only while the service is connected.
+ */
+
+package com.example.maophoneagent.ui.screen
+
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.maophoneagent.ui.viewmodel.PhoneViewModel
+import android.content.Intent
+import android.provider.Settings
+import android.content.ActivityNotFoundException
+import androidx.compose.ui.platform.LocalContext
+import com.example.maophoneagent.infrastructure.accessibility.PhoneAccessibilityService
+
+/**
+ * Displays phone action controls and the current execution status.
+ * Observes service connectivity to update status and action availability.
+ *
+ * @param viewModel The ViewModel used to request actions and observe status.
+ */
+@Composable
+fun HomeScreen(viewModel: PhoneViewModel) {
+
+    // Observes the current operation status while the lifecycle is active.
+    val status by viewModel.status.collectAsStateWithLifecycle()
+
+    // Keeps coordinate input across recompositions, with initial values in pixels.
+    var x by remember { mutableStateOf("500") }
+    var y by remember { mutableStateOf("800") }
+
+    // Uses the current Compose context to launch the system settings activity.
+    val context = LocalContext.current
+    // Observes the actual service connection, rather than only a settings preference.
+    // Changes update the connection label and enable or disable phone action buttons.
+    val accessibilityConnected by PhoneAccessibilityService.connected.collectAsStateWithLifecycle()
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(24.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+
+        Text(
+            text = "MaoPhoneAgent",
+            style = MaterialTheme.typography.headlineMedium
+        )
+
+        Text("Phone Controller Test")
+
+        HorizontalDivider()
+
+        // Shows service availability before the phone action controls.
+        Text(
+            text = "Accessibility Service",
+            style = MaterialTheme.typography.titleMedium
+        )
+
+        Text(
+            text = if (accessibilityConnected) {
+                "Connected"
+            } else {
+                "Disconnected"
+            },
+            color = if (accessibilityConnected) {
+                MaterialTheme.colorScheme.primary
+            } else {
+                MaterialTheme.colorScheme.error
+            }
+        )
+
+        // Keeps the settings shortcut available even when the service is disconnected.
+        // The user enables the service in Android settings; this button only opens the page.
+        Button(
+            onClick = {
+                try {
+                    val intent = Intent(
+                        Settings.ACTION_ACCESSIBILITY_SETTINGS
+                    )
+
+                    context.startActivity(intent)
+
+                } catch (e: ActivityNotFoundException) {
+                    // Some devices may not provide an activity for this settings page.
+                    // Currently ignores the failure without displaying a UI error.
+                }
+            }
+        ) {
+            Text("Open Accessibility Settings")
+        }
+
+        HorizontalDivider()
+
+        // Provides editable screen coordinates for tap requests.
+        Text("Tap Coordinates")
+
+        OutlinedTextField(
+            value = x,
+            onValueChange = { x = it },
+            label = { Text("X") },
+            singleLine = true
+        )
+
+        OutlinedTextField(
+            value = y,
+            onValueChange = { y = it },
+            label = { Text("Y") },
+            singleLine = true
+        )
+
+
+        // Allows tap requests only while the accessibility service is connected.
+        Button(
+            enabled = accessibilityConnected,
+            onClick = {
+                // Requests a tap only when both inputs can be parsed as integers.
+                val tapX = x.toIntOrNull()
+                val tapY = y.toIntOrNull()
+
+                // Invalid integer input is ignored; coordinate validation is handled by the service layer.
+                if (tapX != null && tapY != null) {
+                    viewModel.tap(tapX, tapY)
+                }
+            }
+        ) {
+            Text("Execute Tap")
+        }
+
+        HorizontalDivider()
+
+        // Provides a predefined swipe for testing the connected service.
+        Button(
+            enabled = accessibilityConnected,
+            onClick = {
+                // Requests a downward swipe from (500, 50) to (500, 900) over 500 ms.
+                viewModel.swipe(
+                    500, 50,
+                    500, 900,
+                    500L
+                )
+            }
+        ) {
+            Text("Execute Swipe")
+        }
+
+        // Groups the Android system navigation controls, enabled only while connected.
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Button(
+                enabled = accessibilityConnected,
+                onClick = { viewModel.back() }
+            ) {
+                Text("Back")
+            }
+
+            Button(
+                enabled = accessibilityConnected,
+                onClick = { viewModel.home() }
+            ) {
+                Text("Home")
+            }
+        }
+
+        HorizontalDivider()
+
+        // Displays the latest operation status provided by the ViewModel.
+        Text("Execution Status")
+
+        Text(
+            text = status,
+            color = MaterialTheme.colorScheme.primary
+        )
+    }
+}
