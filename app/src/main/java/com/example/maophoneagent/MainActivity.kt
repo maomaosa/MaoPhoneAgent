@@ -18,6 +18,10 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+
 import com.example.maophoneagent.application.service.PhoneActionService
 import com.example.maophoneagent.domain.controller.PhoneController
 //import com.example.maophoneagent.infrastructure.controller.MockPhoneController
@@ -25,6 +29,7 @@ import com.example.maophoneagent.infrastructure.controller.AccessibilityPhoneCon
 import com.example.maophoneagent.ui.screen.HomeScreen
 import com.example.maophoneagent.ui.theme.MaoPhoneAgentTheme
 import com.example.maophoneagent.ui.viewmodel.PhoneViewModel
+import com.example.maophoneagent.infrastructure.controller.ShizukuController
 
 /**
  * Hosts the phone action screen and provides its ViewModel dependencies.
@@ -62,6 +67,19 @@ class MainActivity : ComponentActivity() {
         )[PhoneViewModel::class.java]
     }
 
+    // Shizuku status observed by Compose.
+    private var shizukuStatus by mutableStateOf("Shizuku status unknown")
+
+    // Shizuku controller.
+    private val shizukuController by lazy {
+        ShizukuController { status ->
+            runOnUiThread {
+                shizukuStatus = status
+            }
+        }
+    }
+
+
     /**
      * Initializes the activity and displays the themed phone action screen.
      *
@@ -73,8 +91,29 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             MaoPhoneAgentTheme {
-                HomeScreen(viewModel = phoneViewModel)
+                HomeScreen(
+                    viewModel = phoneViewModel,
+                    shizukuStatus = shizukuStatus,
+
+                    onRequestShizukuPermission = {
+                        shizukuController.requestPermission()
+                    },
+                    onRefreshShizukuStatus = {
+                        shizukuController.updateStatus()
+                    }
+                )
             }
         }
+    }
+
+
+    override fun onStart() {
+        super.onStart()
+        shizukuController.start()
+    }
+
+    override fun onStop() {
+        shizukuController.stop()
+        super.onStop()
     }
 }

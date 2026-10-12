@@ -27,6 +27,8 @@ import android.content.Intent
 import android.provider.Settings
 import android.content.ActivityNotFoundException
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import com.example.maophoneagent.infrastructure.accessibility.PhoneAccessibilityService
 
 /**
@@ -36,7 +38,12 @@ import com.example.maophoneagent.infrastructure.accessibility.PhoneAccessibility
  * @param viewModel The ViewModel used to request actions and observe status.
  */
 @Composable
-fun HomeScreen(viewModel: PhoneViewModel) {
+fun HomeScreen(
+    viewModel: PhoneViewModel,
+    shizukuStatus: String,
+    onRequestShizukuPermission: () -> Unit,
+    onRefreshShizukuStatus: () -> Unit
+) {
 
     // Observes the current operation status while the lifecycle is active.
     val status by viewModel.status.collectAsStateWithLifecycle()
@@ -54,6 +61,7 @@ fun HomeScreen(viewModel: PhoneViewModel) {
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .verticalScroll(rememberScrollState())
             .padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
@@ -184,9 +192,47 @@ fun HomeScreen(viewModel: PhoneViewModel) {
         // Displays the latest operation status provided by the ViewModel.
         Text("Execution Status")
 
+        // Execution Status
         Text(
             text = status,
             color = MaterialTheme.colorScheme.primary
         )
+
+        // ==========================================
+        // Shizuku Service Test
+        // ==========================================
+
+        HorizontalDivider()
+
+        Text(
+            text = "Shizuku Service",
+            style = MaterialTheme.typography.titleMedium
+        )
+
+        // Display Shizuku connection status.
+        Text(
+            text = shizukuStatus,
+            color = if (
+                shizukuStatus.startsWith("Shizuku connected (UID:")
+            ) {
+                MaterialTheme.colorScheme.primary
+            } else {
+                MaterialTheme.colorScheme.error
+            }
+        )
+
+        // Request permission through MainActivity.
+        Button(
+            onClick = onRequestShizukuPermission
+        ) {
+            Text("Request Shizuku Permission")
+        }
+
+        // Refresh service connection status.
+        OutlinedButton(
+            onClick = onRefreshShizukuStatus
+        ) {
+            Text("Refresh Shizuku Status")
+        }
     }
 }
