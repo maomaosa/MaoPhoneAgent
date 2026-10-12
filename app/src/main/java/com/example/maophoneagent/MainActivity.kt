@@ -30,6 +30,7 @@ import com.example.maophoneagent.ui.screen.HomeScreen
 import com.example.maophoneagent.ui.theme.MaoPhoneAgentTheme
 import com.example.maophoneagent.ui.viewmodel.PhoneViewModel
 import com.example.maophoneagent.infrastructure.controller.ShizukuController
+import com.example.maophoneagent.infrastructure.shizuku.ShizukuShellClient
 
 /**
  * Hosts the phone action screen and provides its ViewModel dependencies.
@@ -79,6 +80,12 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    // Shell test status
+    private var shellTestStatus by mutableStateOf("Shell test not started")
+
+    // Shell client.
+    private lateinit var shellClient: ShizukuShellClient
+
 
     /**
      * Initializes the activity and displays the themed phone action screen.
@@ -89,23 +96,49 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        // Initialize Shell UserService client.
+        shellClient = ShizukuShellClient(
+            applicationContext
+        ) { message ->
+            shellTestStatus = message
+        }
+
         setContent {
             MaoPhoneAgentTheme {
                 HomeScreen(
                     viewModel = phoneViewModel,
+
+                    // Existing Shizuku authorization UI.
                     shizukuStatus = shizukuStatus,
 
                     onRequestShizukuPermission = {
                         shizukuController.requestPermission()
                     },
+
                     onRefreshShizukuStatus = {
                         shizukuController.updateStatus()
+                    },
+
+                    // New Shell UserService test UI.
+                    shellTestStatus = shellTestStatus,
+
+                    onConnectShell = {
+                        shellClient.connect()
+                    },
+
+                    onRunShellId = {
+                        shellClient.runId()
+                    },
+
+                    onTapVirtualDisplay = { displayId, x, y ->
+                        shellClient.tap(displayId, x, y)
                     }
+
+
                 )
             }
         }
     }
-
 
     override fun onStart() {
         super.onStart()
@@ -115,5 +148,10 @@ class MainActivity : ComponentActivity() {
     override fun onStop() {
         shizukuController.stop()
         super.onStop()
+    }
+
+    override fun onDestroy() {
+        shellClient.close()
+        super.onDestroy()
     }
 }

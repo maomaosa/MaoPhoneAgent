@@ -40,9 +40,17 @@ import com.example.maophoneagent.infrastructure.accessibility.PhoneAccessibility
 @Composable
 fun HomeScreen(
     viewModel: PhoneViewModel,
+
+    // Existing Shizuku parameters.
     shizukuStatus: String,
     onRequestShizukuPermission: () -> Unit,
-    onRefreshShizukuStatus: () -> Unit
+    onRefreshShizukuStatus: () -> Unit,
+
+    // New Shell UserService parameters.
+    shellTestStatus: String,
+    onConnectShell: () -> Unit,
+    onRunShellId: () -> Unit,
+    onTapVirtualDisplay: (Int, Int, Int) -> Unit
 ) {
 
     // Observes the current operation status while the lifecycle is active.
@@ -234,5 +242,116 @@ fun HomeScreen(
         ) {
             Text("Refresh Shizuku Status")
         }
+
+
+        // ==========================================
+        // Shell UserService Test
+        // ==========================================
+
+        HorizontalDivider()
+
+        Text(
+            text = "Shell UserService Test",
+            style = MaterialTheme.typography.titleMedium
+        )
+
+        // Display remote service or command status.
+        Text(
+            text = shellTestStatus,
+            color = MaterialTheme.colorScheme.primary
+        )
+
+        // Connect to the Shizuku UserService.
+        Button(
+            onClick = onConnectShell
+        ) {
+            Text("Connect Shell UserService")
+        }
+
+        // Execute the diagnostic command.
+        OutlinedButton(
+            onClick = onRunShellId
+        ) {
+            Text("Execute Shell ID")
+        }
+
+
+        // ==========================================
+        // Virtual Display Tap Test
+        // ==========================================
+
+        HorizontalDivider()
+
+        Text(
+            text = "Virtual Display Test",
+            style = MaterialTheme.typography.titleMedium
+        )
+
+        // Display ID can change when the display is recreated.
+        var virtualDisplayId by remember {
+            mutableStateOf("1")
+        }
+
+        var virtualTapX by remember {
+            mutableStateOf("350")
+        }
+
+        var virtualTapY by remember {
+            mutableStateOf("500")
+        }
+
+        OutlinedTextField(
+            value = virtualDisplayId,
+            onValueChange = { virtualDisplayId = it },
+            label = { Text("Virtual Display ID") },
+            singleLine = true
+        )
+
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            OutlinedTextField(
+                value = virtualTapX,
+                onValueChange = { virtualTapX = it },
+                label = { Text("X") },
+                modifier = Modifier.weight(1f),
+                singleLine = true
+            )
+
+            OutlinedTextField(
+                value = virtualTapY,
+                onValueChange = { virtualTapY = it },
+                label = { Text("Y") },
+                modifier = Modifier.weight(1f),
+                singleLine = true
+            )
+        }
+
+        val targetDisplayId = virtualDisplayId.toIntOrNull()
+        val targetX = virtualTapX.toIntOrNull()
+        val targetY = virtualTapY.toIntOrNull()
+
+        Button(
+            enabled = targetDisplayId != null &&
+                    targetDisplayId > 0 &&
+                    targetX != null &&
+                    targetX >= 0 &&
+                    targetY != null &&
+                    targetY >= 0,
+
+            onClick = {
+                val id = targetDisplayId
+                val x = targetX
+                val y = targetY
+
+                if (id != null && x != null && y != null) {
+                    onTapVirtualDisplay(id, x, y)
+                }
+            }
+        ) {
+            Text("Tap Virtual Display")
+        }
+
+
     }
 }
