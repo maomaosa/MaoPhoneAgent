@@ -5,7 +5,7 @@
  * Description:
  * Provides the main activity for the MaoPhoneAgent application.
  * Connects the phone controller, application service, and ViewModel,
- * and displays HomeScreen using the application theme.
+ * and displays TestScreen using the application theme.
  *
  * Currently uses MockPhoneController to verify operation calls
  * while actual device control is pending implementation.
@@ -26,7 +26,7 @@ import com.example.maophoneagent.application.service.PhoneActionService
 import com.example.maophoneagent.domain.controller.PhoneController
 //import com.example.maophoneagent.infrastructure.controller.MockPhoneController
 import com.example.maophoneagent.infrastructure.controller.AccessibilityPhoneController
-import com.example.maophoneagent.ui.screen.HomeScreen
+import com.example.maophoneagent.ui.screen.TestScreen
 import com.example.maophoneagent.ui.theme.MaoPhoneAgentTheme
 import com.example.maophoneagent.ui.viewmodel.PhoneViewModel
 import com.example.maophoneagent.infrastructure.shizuku.ShizukuController
@@ -105,7 +105,7 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             MaoPhoneAgentTheme {
-                HomeScreen(
+                TestScreen(
                     viewModel = phoneViewModel,
 
                     // Existing Shizuku authorization UI.
@@ -153,6 +153,10 @@ class MainActivity : ComponentActivity() {
 
                     onLaunchVirtualApp = { displayId, packageName ->
                         shellClient.launchApp(displayId, packageName)
+                    },
+
+                    onListInstalledPackages = {
+                        shellClient.listInstalledPackages()
                     }
 
                 )

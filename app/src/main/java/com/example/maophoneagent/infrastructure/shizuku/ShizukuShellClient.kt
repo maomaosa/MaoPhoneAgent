@@ -51,8 +51,8 @@ class ShizukuShellClient(
         .processNameSuffix("mao_shell")
         .tag("maophoneagent_shell")
         .daemon(false)
-        // Restarts an older UserService after adding the app launch AIDL method.
-        .version(10)
+        // Restarts an older UserService after adding the package listing AIDL method.
+        .version(11)
 
     // Converts the connected Binder into the AIDL interface and clears it on disconnect.
     private val connection = object : ServiceConnection {
@@ -154,7 +154,6 @@ class ShizukuShellClient(
             }
         }.start()
     }
-
 
     /**
      * Requests a tap on the target display using a background remote call.
@@ -415,6 +414,31 @@ class ShizukuShellClient(
                 updateStatus(
                     "Launch failed: ${e.javaClass.simpleName}: ${e.message}"
                 )
+            }
+        }.start()
+    }
+
+    /**
+     * Lists installed packages through a background remote call.
+     * Reports connection errors, command output, or execution errors on the main thread.
+     */
+    fun listInstalledPackages() {
+        val service = remoteService
+
+        if (service == null) {
+            updateStatus("Shell UserService not connected")
+            return
+        }
+
+        updateStatus("Listing installed packages...")
+
+        Thread {
+            try {
+                val result = service.listInstalledPackages()
+                updateStatus(result ?: "Remote package listing returned null")
+            } catch (e: Exception) {
+                Log.e("MaoShell", "Package listing failed", e)
+                updateStatus("Package listing failed: ${e.javaClass.simpleName}: ${e.message}")
             }
         }.start()
     }

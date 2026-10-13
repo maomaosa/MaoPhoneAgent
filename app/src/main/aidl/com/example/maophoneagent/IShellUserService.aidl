@@ -27,6 +27,9 @@ interface IShellUserService {
     // Launch App on a specific non-default display.
     String launchApp(int displayId, String packageName) = 10;
 
+    // List installed package names, including packages without launcher activities.
+    String listInstalledPackages() = 11;
+
     // Reserved Shizuku service cleanup method.
     void destroy() = 16777114;
 }

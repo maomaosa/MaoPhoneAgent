@@ -311,6 +311,33 @@ class ShizukuShellUserService : IShellUserService.Stub() {
         }
     }
 
+    /**
+     * Lists installed package names using the shell package manager command.
+     * Includes packages without launcher activities; this does not list app labels.
+     *
+     * @return The exit code and combined command output, or an execution error.
+     */
+    override fun listInstalledPackages(): String {
+        return try {
+            val process = ProcessBuilder(
+                "/system/bin/pm",
+                "list",
+                "packages"
+            )
+                .redirectErrorStream(true)
+                .start()
+
+            val output = process.inputStream
+                .bufferedReader()
+                .use { it.readText().trim() }
+
+            val exitCode = process.waitFor()
+
+            "Installed packages\nExit code: $exitCode\n$output"
+        } catch (e: Exception) {
+            "Package listing failed: ${e.javaClass.simpleName}: ${e.message}"
+        }
+    }
 
     /**
      * Sends KEYCODE_BACK to the target display and waits for command completion.

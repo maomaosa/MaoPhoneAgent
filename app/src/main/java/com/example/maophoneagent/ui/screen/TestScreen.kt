@@ -1,9 +1,9 @@
 /*
- * File: HomeScreen.kt
+ * File: TestScreen.kt
  * Module: ui.screen
  *
  * Description:
- * Provides a test screen for basic phone interactions.
+ * Provides a test screen for phone interactions and Shizuku shell operations.
  * Allows users to enter tap coordinates, request a predefined swipe,
  * and trigger Android Back and Home navigation actions.
  * Displays accessibility service connection status and provides
@@ -29,16 +29,17 @@ import android.content.ActivityNotFoundException
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.text.selection.SelectionContainer
 import com.example.maophoneagent.infrastructure.accessibility.PhoneAccessibilityService
 
 /**
- * Displays phone action controls and the current execution status.
+ * Displays test controls for phone actions, shell operations, and their execution status.
  * Observes service connectivity to update status and action availability.
  *
  * @param viewModel The ViewModel used to request actions and observe status.
  */
 @Composable
-fun HomeScreen(
+fun TestScreen(
     viewModel: PhoneViewModel,
 
     // Existing Shizuku parameters.
@@ -55,7 +56,9 @@ fun HomeScreen(
     onBackVirtualDisplay: (Int) -> Unit,
     onHomeVirtualDisplay: (Int) -> Unit,
     // Requests an installed package on the selected virtual display.
-    onLaunchVirtualApp: (Int, String) -> Unit
+    onLaunchVirtualApp: (Int, String) -> Unit,
+    // Requests installed package names from the shell UserService.
+    onListInstalledPackages: () -> Unit
 ) {
 
     // Observes the current operation status while the lifecycle is active.
@@ -294,7 +297,7 @@ fun HomeScreen(
 
         // Display ID can change when the display is recreated.
         var virtualDisplayId by remember {
-            mutableStateOf("1")
+            mutableStateOf("2")
         }
 
         var virtualTapX by remember {
@@ -471,9 +474,23 @@ fun HomeScreen(
             Text("Launch App on Virtual Display")
         }
 
-        // Repeats the shared result below the controls so launch errors are easy to read.
-        Text("Shell Execution Status")
-        Text(text = shellTestStatus, color = MaterialTheme.colorScheme.primary)
+        // ==========================================
+        // Shell Installed Packages Test
+        // ==========================================
+
+        HorizontalDivider()
+
+        Text(
+            text = "Shell Installed Packages Test",
+            style = MaterialTheme.typography.titleMedium
+        )
+
+        // Package listing is device-wide and does not require a display ID.
+        Text("Lists installed package names, including apps without launcher activities.")
+
+        Button(onClick = onListInstalledPackages) {
+            Text("List Installed Packages")
+        }
 
 
     }
