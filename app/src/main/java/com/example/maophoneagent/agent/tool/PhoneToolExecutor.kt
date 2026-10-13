@@ -44,7 +44,7 @@ class PhoneToolExecutor(
      * Expected operation failures are returned as results; coroutine cancellation propagates.
      *
      * @param session The application-selected target display context.
-     * @param call The observation, gesture, or navigation request to execute.
+     * @param call The observation, gesture, navigation, app launch, or package listing request.
      * @return The tool result, or a validation failure if the display is unavailable.
      * @throws CancellationException If the calling coroutine is cancelled.
      */
@@ -87,6 +87,14 @@ class PhoneToolExecutor(
 
                 AgentToolCall.Back -> {
                     shellResult("back", shellClient.backForAgent(displayId))
+                }
+
+                is AgentToolCall.LaunchApp -> {
+                    executeLaunchApp(displayId, call)
+                }
+
+                AgentToolCall.ListApps -> {
+                    executeListApps()
                 }
             }
 
@@ -212,7 +220,33 @@ class PhoneToolExecutor(
         return shellResult("swipe", result)
     }
 
-    /** Converts the existing shell text response into a structured action result. */
+    /**
+     * Validates the package name and awaits an app launch on the session's display.
+     *
+     * @param displayId The validated positive Android display ID.
+     * @param call The installed package requested by the Agent tool.
+     * @return The shell launch result or a package validation failure.
+     * Command success does not guarantee that the activity appeared on the display.
+     */
+    private suspend fun executeLaunchApp(displayId: Int, call: AgentToolCall.LaunchApp): AgentToolResult {
+        val packagePattern = Regex("""[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)+""")
+        if (!packagePattern.matches(call.packageName)) {
+            return AgentToolResult("launch_app", false, "Invalid package name: ${call.packageName}")
+        }
+        return shellResult("launch_app", shellClient.launchAppForAgent(displayId, call.packageName))
+    }
+
+    /**
+     * Awaits the device-wide package list through Shizuku.
+     *
+     * @return A ListApps result with the exit code and installed package names in its message.
+     * The result includes packages without launcher activities and does not contain app labels.
+     */
+    private suspend fun executeListApps(): AgentToolResult {
+        return shellResult("list_apps", shellClient.listAppsForAgent())
+    }
+
+    /** Converts the existing shell text response into a structured tool result. */
     private fun shellResult(toolName: String, result: String): AgentToolResult {
         // Parses the current text response; exit code 0 indicates command completion,
         // while the target app's visible response must be verified separately.

@@ -13,8 +13,8 @@ package com.example.maophoneagent.agent.model
 /**
  * Supported tool requests.
  *
- * Supports Observe, Tap, Swipe, Home, and Back. The sealed hierarchy allows the executor
- * to handle every supported request explicitly.
+ * Supports observations, gestures, navigation, app launches, and package listing.
+ * The sealed hierarchy allows the executor to handle every supported request explicitly.
  */
 sealed interface AgentToolCall {
 
@@ -58,6 +58,21 @@ sealed interface AgentToolCall {
 
     /** Requests Back navigation on the session's display through a shell key event. */
     data object Back : AgentToolCall
+
+    /**
+     * Requests an installed app on the session's display.
+     * The executor validates the package name before dispatch.
+     *
+     * @property packageName The installed package containing the activity to launch.
+     */
+    data class LaunchApp(val packageName: String) : AgentToolCall
+
+    /**
+     * Requests installed package names through the shell UserService.
+     * Includes packages without launcher activities. The list is device-wide,
+     * although the executor still validates the current session display.
+     */
+    data object ListApps : AgentToolCall
 }
 
 /**

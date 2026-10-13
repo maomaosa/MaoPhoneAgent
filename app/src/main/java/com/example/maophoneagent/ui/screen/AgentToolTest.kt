@@ -3,7 +3,7 @@
  * Module: ui.screen
  *
  * Description:
- * Tests observations, gestures, and navigation through the future AI tool executor.
+ * Tests observations, actions, app launches, and package listing through the AI tool executor.
  * Displays structured tool results, selectable UI JSON, and screenshot previews.
  */
 package com.example.maophoneagent.ui.screen
@@ -42,6 +42,7 @@ fun AgentToolTest(executor: PhoneToolExecutor, accessibilityConnected: Boolean) 
     var endXInput by remember { mutableStateOf("350") }
     var endYInput by remember { mutableStateOf("300") }
     var durationInput by remember { mutableStateOf("500") }
+    var packageInput by remember { mutableStateOf("com.android.settings") }
     var delayInput by remember { mutableStateOf("0") }
     var busy by remember { mutableStateOf(false) }
     var status by remember { mutableStateOf("Ready") }
@@ -56,6 +57,11 @@ fun AgentToolTest(executor: PhoneToolExecutor, accessibilityConnected: Boolean) 
     val endY = endYInput.toIntOrNull()
     val durationMs = durationInput.toIntOrNull()
     val seconds = delayInput.toIntOrNull()
+    val packageName = packageInput.trim()
+    val packagePattern = remember {
+        Regex("""[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)+""")
+    }
+    val validPackage = packagePattern.matches(packageName)
     val valid = !busy && displayId != null && displayId > 0 && seconds != null && seconds in 0..10
 
     fun runTool(call: AgentToolCall) {
@@ -90,7 +96,7 @@ fun AgentToolTest(executor: PhoneToolExecutor, accessibilityConnected: Boolean) 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         HorizontalDivider()
         Text("Agent Tool Test", style = MaterialTheme.typography.titleMedium)
-        Text("Observe requires accessibility. Tap, Swipe, Home, and Back require Shizuku permission and a connected Shell UserService.")
+        Text("Observe requires accessibility. Actions, app launches, and ListApps require Shizuku permission and a connected Shell UserService.")
         Text("Enter an existing virtual display ID greater than 0. Action success reports command completion; verify the app's response on that display.")
         OutlinedTextField(
             value = displayInput, onValueChange = { displayInput = it },
@@ -167,10 +173,34 @@ fun AgentToolTest(executor: PhoneToolExecutor, accessibilityConnected: Boolean) 
             Button(enabled = valid, onClick = { runTool(AgentToolCall.Back) }) { Text("Agent Back") }
         }
 
+        // The package is a tool argument; the target display remains selected by the session.
+        Text("Agent App Launch", style = MaterialTheme.typography.titleSmall)
+        OutlinedTextField(
+            value = packageInput, onValueChange = { packageInput = it },
+            label = { Text("App Package Name") }, singleLine = true, enabled = !busy,
+            isError = packageInput.isNotEmpty() && !validPackage,
+            supportingText = { Text("Example: com.android.settings") }
+        )
+        Button(enabled = valid && validPackage,
+            onClick = { runTool(AgentToolCall.LaunchApp(packageName)) }) {
+            Text("Agent Launch App")
+        }
+
+        // Lists packages through the Agent route; no package or coordinate input is needed.
+        Text("Agent App List", style = MaterialTheme.typography.titleSmall)
+        Text("Lists device-wide package names, including apps without launcher activities. A valid Agent session display is still required.")
+        Button(enabled = valid, onClick = { runTool(AgentToolCall.ListApps) }) {
+            Text("Agent List Apps")
+        }
+
         if (busy) LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
         Text(status)
         result?.let { response ->
-            SelectionContainer { Text(response.message) }
+            SelectionContainer {
+                Text(response.message,
+                    modifier = Modifier.fillMaxWidth().heightIn(max = 300.dp)
+                        .verticalScroll(rememberScrollState()))
+            }
             response.uiJson?.let { json ->
                 Text("UI JSON: ${response.nodeCount} nodes")
                 SelectionContainer {

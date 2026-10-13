@@ -530,6 +530,35 @@ class ShizukuShellClient(
     }
 
     /**
+     * Requests an app on the target display and waits for the remote launch result.
+     * Uses the existing UserService launch command without changing UI callbacks.
+     *
+     * @param displayId The positive Android display ID; the main display is rejected.
+     * @param packageName The installed package containing the launchable activity.
+     * @return The shell output and exit code, including any launch errors.
+     */
+    suspend fun launchAppForAgent(displayId: Int, packageName: String): String = withContext(Dispatchers.IO) {
+        require(displayId > 0) { "Main display is not allowed" }
+        val packagePattern = Regex("""[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)+""")
+        require(packagePattern.matches(packageName)) { "Invalid package name: $packageName" }
+        check(Shizuku.pingBinder()) { "Shizuku is not running" }
+        val service = checkNotNull(remoteService) { "Shell UserService is not connected" }
+        checkNotNull(service.launchApp(displayId, packageName)) { "Remote launch returned null" }
+    }
+
+    /**
+     * Lists installed packages and waits for the result for Agent tools.
+     * Uses a background remote call without changing the existing UI status callback.
+     *
+     * @return The command exit code and package list, including any shell errors.
+     */
+    suspend fun listAppsForAgent(): String = withContext(Dispatchers.IO) {
+        check(Shizuku.pingBinder()) { "Shizuku is not running" }
+        val service = checkNotNull(remoteService) { "Shell UserService is not connected" }
+        checkNotNull(service.listInstalledPackages()) { "Remote package listing returned null" }
+    }
+
+    /**
      * Clears the remote interface and requests removal of the bound UserService.
      * Call this when the owning component no longer needs the client.
      */
