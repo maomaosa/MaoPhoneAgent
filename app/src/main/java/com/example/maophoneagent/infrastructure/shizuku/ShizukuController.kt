@@ -12,7 +12,7 @@
  * it does not execute phone interactions.
  */
 
-package com.example.maophoneagent.infrastructure.controller
+package com.example.maophoneagent.infrastructure.shizuku
 
 import android.content.pm.PackageManager
 import rikka.shizuku.Shizuku

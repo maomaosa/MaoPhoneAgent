@@ -4,7 +4,7 @@
  *
  * Description:
  * Connects to the shell UserService managed by Shizuku.
- * Validates gesture requests and performs remote calls on background threads.
+ * Validates gesture and navigation requests and performs remote calls on background threads.
  * Reports connection and command results through a main-thread callback.
  */
 
@@ -51,7 +51,8 @@ class ShizukuShellClient(
         .processNameSuffix("mao_shell")
         .tag("maophoneagent_shell")
         .daemon(false)
-        .version(8)
+        // Restarts an older UserService after adding the app launch AIDL method.
+        .version(10)
 
     // Converts the connected Binder into the AIDL interface and clears it on disconnect.
     private val connection = object : ServiceConnection {
@@ -159,7 +160,7 @@ class ShizukuShellClient(
      * Requests a tap on the target display using a background remote call.
      * Reports validation errors, command results, or Binder failure details.
      *
-     * @param displayId The positive Android display ID; display 0 is rejected.
+     * @param displayId The target Android display ID greater than 1; IDs 0 and 1 are rejected.
      * @param x The non-negative horizontal coordinate in pixels.
      * @param y The non-negative vertical coordinate in pixels.
      */
@@ -175,7 +176,7 @@ class ShizukuShellClient(
             return
         }
 
-        if (displayId <= 0 || x < 0 || y < 0) {
+        if (displayId <= 1 || x < 0 || y < 0) {
             updateStatus("Invalid display or coordinates")
             return
         }
@@ -231,7 +232,7 @@ class ShizukuShellClient(
      * Requests a swipe on the target display using a background remote call.
      * Reports validation errors, command results, or execution errors.
      *
-     * @param displayId The positive Android display ID; display 0 is rejected.
+     * @param displayId The target Android display ID greater than 1; IDs 0 and 1 are rejected.
      * @param x1 The non-negative starting horizontal coordinate in pixels.
      * @param y1 The non-negative starting vertical coordinate in pixels.
      * @param x2 The non-negative ending horizontal coordinate in pixels.
@@ -253,7 +254,7 @@ class ShizukuShellClient(
             return
         }
 
-        if (displayId <= 0 ||
+        if (displayId <= 1 ||
             listOf(x1, y1, x2, y2).any { it < 0 } ||
             durationMs !in 1..10000
         ) {
@@ -298,6 +299,126 @@ class ShizukuShellClient(
             onStatusChanged(message)
         }
     }
+
+    /**
+     * Requests Home on the target display using a background remote call.
+     * Reports validation errors, command results, or execution errors.
+     *
+     * @param displayId The target Android display ID greater than 1; IDs 0 and 1 are rejected.
+     */
+    fun home(displayId: Int) {
+        val service = remoteService
+
+        if (service == null) {
+            updateStatus("Shell UserService not connected")
+            return
+        }
+
+        if (displayId <= 1) {
+            updateStatus("Invalid display ID: $displayId")
+            return
+        }
+
+        updateStatus("Executing Shell Home: display=$displayId")
+
+        Thread {
+            try {
+                val result = service.home(displayId)
+                updateStatus(result ?: "Remote home returned null")
+            } catch (e: Exception) {
+                Log.e("MaoShell", "Home failed", e)
+                updateStatus("Home failed: ${e.javaClass.simpleName}: ${e.message}")
+            }
+        }.start()
+    }
+
+    /**
+     * Requests Back on the target display using a background remote call.
+     * Reports validation errors, command results, or execution errors.
+     *
+     * @param displayId The target Android display ID greater than 1; IDs 0 and 1 are rejected.
+     */
+    fun back(displayId: Int) {
+        val service = remoteService
+
+        if (service == null) {
+            updateStatus("Shell UserService not connected")
+            return
+        }
+
+        if (displayId <= 1) {
+            updateStatus("Invalid display ID: $displayId")
+            return
+        }
+
+        updateStatus("Executing Shell Back: display=$displayId")
+
+        Thread {
+            try {
+                val result = service.back(displayId)
+                updateStatus(result ?: "Remote back returned null")
+            } catch (e: Exception) {
+                Log.e("MaoShell", "Back failed", e)
+                updateStatus("Back failed: ${e.javaClass.simpleName}: ${e.message}")
+            }
+        }.start()
+    }
+
+
+    /**
+     * Requests an app launch on the target display using a background remote call.
+     * Reports parameter errors and the remote command result on the main thread.
+     *
+     * @param displayId The target Android display ID greater than 1.
+     * @param packageName The installed app's package name, without surrounding whitespace.
+     */
+    fun launchApp(
+        displayId: Int,
+        packageName: String
+    ) {
+        val service = remoteService
+
+        if (service == null) {
+            updateStatus("Shell UserService not connected")
+            return
+        }
+
+        // Matches the service-side validation before starting a background call.
+        if (displayId <= 1) {
+            updateStatus("Invalid display ID: $displayId")
+            return
+        }
+        val packagePattern = Regex(
+            """[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)+"""
+        )
+        if (!packagePattern.matches(packageName)) {
+            updateStatus("Invalid package name: $packageName")
+            return
+        }
+
+        updateStatus("Launching $packageName on display=$displayId...")
+
+        Thread {
+            try {
+                val result = service.launchApp(
+                    displayId,
+                    packageName
+                )
+
+                updateStatus(
+                    result ?: "Launch returned null"
+                )
+
+            } catch (e: Exception) {
+                Log.e("MaoShell", "Launch failed", e)
+
+                updateStatus(
+                    "Launch failed: ${e.javaClass.simpleName}: ${e.message}"
+                )
+            }
+        }.start()
+    }
+
 
     /**
      * Clears the remote interface and requests removal of the bound UserService.

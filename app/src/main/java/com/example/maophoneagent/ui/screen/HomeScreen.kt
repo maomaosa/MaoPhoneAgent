@@ -51,7 +51,11 @@ fun HomeScreen(
     onConnectShell: () -> Unit,
     onRunShellId: () -> Unit,
     onTapVirtualDisplay: (Int, Int, Int) -> Unit,
-    onSwipeVirtualDisplay: (Int) -> Unit
+    onSwipeVirtualDisplay: (Int) -> Unit,
+    onBackVirtualDisplay: (Int) -> Unit,
+    onHomeVirtualDisplay: (Int) -> Unit,
+    // Requests an installed package on the selected virtual display.
+    onLaunchVirtualApp: (Int, String) -> Unit
 ) {
 
     // Observes the current operation status while the lifecycle is active.
@@ -305,6 +309,7 @@ fun HomeScreen(
             value = virtualDisplayId,
             onValueChange = { virtualDisplayId = it },
             label = { Text("Virtual Display ID") },
+            supportingText = { Text("Enter the actual display ID greater than 1.") },
             singleLine = true
         )
 
@@ -334,7 +339,7 @@ fun HomeScreen(
 
         Button(
             enabled = targetDisplayId != null &&
-                    targetDisplayId > 0 &&
+                    targetDisplayId > 1 &&
                     targetX != null &&
                     targetX >= 0 &&
                     targetY != null &&
@@ -370,16 +375,105 @@ fun HomeScreen(
 
         // MainActivity supplies the predefined gesture through this callback.
         Button(
-            enabled = targetDisplayId != null && targetDisplayId > 0,
+            enabled = targetDisplayId != null && targetDisplayId > 1,
             onClick = {
                 val id = targetDisplayId
-                if (id != null && id > 0) {
+                if (id != null && id > 1) {
                     onSwipeVirtualDisplay(id)
                 }
             }
         ) {
             Text("Swipe Virtual Display")
         }
+
+        // ==========================================
+        // Virtual Display Shell Navigation Test
+        // ==========================================
+
+        HorizontalDivider()
+
+        Text(
+            text = "Virtual Display Shell Navigation Test",
+            style = MaterialTheme.typography.titleMedium
+        )
+
+        // Shares the target display with tap and swipe; results appear in the shell status.
+        Text("Uses the Virtual Display ID above.")
+
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Button(
+                enabled = targetDisplayId != null && targetDisplayId > 1,
+                onClick = {
+                    val id = targetDisplayId
+                    if (id != null && id > 1) {
+                        onBackVirtualDisplay(id)
+                    }
+                }
+            ) {
+                Text("Shell Back")
+            }
+
+            Button(
+                enabled = targetDisplayId != null && targetDisplayId > 1,
+                onClick = {
+                    val id = targetDisplayId
+                    if (id != null && id > 1) {
+                        onHomeVirtualDisplay(id)
+                    }
+                }
+            ) {
+                Text("Shell Home")
+            }
+        }
+
+        // ==========================================
+        // Virtual Display App Launch Test
+        // ==========================================
+
+        HorizontalDivider()
+
+        Text(
+            text = "Virtual Display App Launch Test",
+            style = MaterialTheme.typography.titleMedium
+        )
+
+        // Shares the display ID above; Settings provides a convenient initial test.
+        var virtualAppPackage by remember { mutableStateOf("com.android.settings") }
+        val targetPackage = virtualAppPackage.trim()
+        val packagePattern = remember {
+            Regex("""[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)+""")
+        }
+        val validPackage = packagePattern.matches(targetPackage)
+
+        Text("Uses the Virtual Display ID above (greater than 1).")
+
+        OutlinedTextField(
+            value = virtualAppPackage,
+            onValueChange = { virtualAppPackage = it },
+            label = { Text("App Package Name") },
+            singleLine = true,
+            isError = virtualAppPackage.isNotEmpty() && !validPackage,
+            supportingText = { Text("Example: com.android.settings") }
+        )
+
+        // Validates input before delegating to the shell client through MainActivity.
+        Button(
+            enabled = targetDisplayId != null && targetDisplayId > 1 && validPackage,
+            onClick = {
+                val id = targetDisplayId
+                if (id != null && id > 1 && validPackage) {
+                    onLaunchVirtualApp(id, targetPackage)
+                }
+            }
+        ) {
+            Text("Launch App on Virtual Display")
+        }
+
+        // Repeats the shared result below the controls so launch errors are easy to read.
+        Text("Shell Execution Status")
+        Text(text = shellTestStatus, color = MaterialTheme.colorScheme.primary)
 
 
     }

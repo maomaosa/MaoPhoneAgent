@@ -4,8 +4,9 @@
  *
  * Description:
  * Implements the shell AIDL service in a separate Shizuku-managed process.
- * Executes a fixed identity diagnostic and display-specific tap and swipe commands.
- * Validates gesture parameters and returns command output with exit information.
+ * Executes a fixed identity diagnostic and display-specific tap, swipe,
+ * Back, and Home commands. Validates request parameters and returns
+ * command output with exit information.
  */
 
 package com.example.maophoneagent.infrastructure.shizuku
@@ -53,7 +54,7 @@ class ShizukuShellUserService : IShellUserService.Stub() {
     /**
      * Executes a tap command on a specific display and waits for process exit.
      *
-     * @param displayId The positive Android display ID; display 0 is rejected.
+     * @param displayId The target Android display ID greater than 1; IDs 0 and 1 are rejected.
      * @param x The non-negative horizontal coordinate in pixels.
      * @param y The non-negative vertical coordinate in pixels.
      * @return The tap description, exit code, and available command output,
@@ -66,7 +67,8 @@ class ShizukuShellUserService : IShellUserService.Stub() {
     ): String {
 
         // Prevent accidentally controlling the main screen.
-        if (displayId <= 0) {
+        // Reserves display IDs 0 and 1 under the current test policy.
+        if (displayId <= 1) {
             return "Invalid displayId: $displayId"
         }
         // Rejects negative screen coordinates.
@@ -110,7 +112,7 @@ class ShizukuShellUserService : IShellUserService.Stub() {
     /**
      * Executes a swipe command on a specific display and waits for process exit.
      *
-     * @param displayId The positive Android display ID; display 0 is rejected.
+     * @param displayId The target Android display ID greater than 1; IDs 0 and 1 are rejected.
      * @param x1 The non-negative starting horizontal coordinate in pixels.
      * @param y1 The non-negative starting vertical coordinate in pixels.
      * @param x2 The non-negative ending horizontal coordinate in pixels.
@@ -129,7 +131,8 @@ class ShizukuShellUserService : IShellUserService.Stub() {
     ): String {
 
         // Prevent accidentally controlling the main screen.
-        if (displayId <= 0) {
+        // Reserves display IDs 0 and 1 under the current test policy.
+        if (displayId <= 1) {
             return "Invalid display ID"
         }
 
@@ -186,6 +189,169 @@ class ShizukuShellUserService : IShellUserService.Stub() {
      */
     override fun destroy() {
         System.exit(0)
+    }
+
+    /**
+     * Sends KEYCODE_HOME to the target display and waits for command completion.
+     *
+     * @param displayId The target Android display ID greater than 1; IDs 0 and 1 are rejected.
+     * @return The action description, exit code, and command output, or an error.
+     */
+    override fun home(displayId: Int): String {
+        // Uses the same display restriction as tap and swipe.
+        // Reserves display IDs 0 and 1 under the current test policy.
+        if (displayId <= 1) {
+            return "Invalid display ID: $displayId"
+        }
+
+        return try {
+            val process = ProcessBuilder(
+                "/system/bin/input",
+                "-d",
+                displayId.toString(),
+                "keyevent",
+                "KEYCODE_HOME"
+            )
+                .redirectErrorStream(true)
+                .start()
+
+            val output = process.inputStream
+                .bufferedReader()
+                .use { it.readText().trim() }
+
+            val exitCode = process.waitFor()
+
+            buildString {
+                append("Home display=$displayId")
+                append("\nExit code: $exitCode")
+                if (output.isNotEmpty()) {
+                    append("\n$output")
+                }
+            }
+        } catch (e: Exception) {
+            "Home failed: ${e.javaClass.simpleName}: ${e.message}"
+        }
+    }
+
+
+    /**
+     * Requests an app launch through am start with an explicit target display.
+     * Uses the Settings action for com.android.settings and the launcher intent
+     * for other packages. The target display must exist and allow activity launches.
+     *
+     * @param displayId The target Android display ID greater than 1.
+     * @param packageName The installed app's package name.
+     * @return The requested package and display, exit code, and combined output,
+     * or a validation or execution error. Command completion alone does not
+     * confirm that the activity appeared on the target display.
+     */
+    override fun launchApp(
+        displayId: Int,
+        packageName: String
+    ): String {
+
+        if (displayId <= 1) {
+            return "Invalid display ID: $displayId"
+        }
+
+        // Restricts input to package names; arguments are passed directly without a shell.
+        val packagePattern = Regex(
+            """[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)+"""
+        )
+
+        if (!packagePattern.matches(packageName)) {
+            return "Invalid package name: $packageName"
+        }
+
+        return try {
+            // Keeps Settings resolution within the requested package.
+            // Other apps must expose an activity matching MAIN and LAUNCHER.
+            val command = if (packageName == "com.android.settings") {
+                listOf(
+                    "/system/bin/am",
+                    "start",
+                    "--display",
+                    displayId.toString(),
+                    "-a",
+                    "android.settings.SETTINGS",
+                    "-p",
+                    packageName
+                )
+            } else {
+                listOf(
+                    "/system/bin/am",
+                    "start",
+                    "--display",
+                    displayId.toString(),
+                    "-a",
+                    "android.intent.action.MAIN",
+                    "-c",
+                    "android.intent.category.LAUNCHER",
+                    "-p",
+                    packageName
+                )
+            }
+
+            val process = ProcessBuilder(command)
+                .redirectErrorStream(true)
+                .start()
+
+            val output = process.inputStream
+                .bufferedReader()
+                .use { it.readText().trim() }
+
+            val exitCode = process.waitFor()
+
+            "Launch $packageName on display=$displayId" +
+                    "\nExit code: $exitCode" +
+                    "\n$output"
+
+        } catch (e: Exception) {
+            "Launch failed: ${e.javaClass.simpleName}: ${e.message}"
+        }
+    }
+
+
+    /**
+     * Sends KEYCODE_BACK to the target display and waits for command completion.
+     *
+     * @param displayId The target Android display ID greater than 1; IDs 0 and 1 are rejected.
+     * @return The action description, exit code, and command output, or an error.
+     */
+    override fun back(displayId: Int): String {
+        // Uses the same display restriction as tap and swipe.
+        // Reserves display IDs 0 and 1 under the current test policy.
+        if (displayId <= 1) {
+            return "Invalid display ID: $displayId"
+        }
+
+        return try {
+            val process = ProcessBuilder(
+                "/system/bin/input",
+                "-d",
+                displayId.toString(),
+                "keyevent",
+                "KEYCODE_BACK"
+            )
+                .redirectErrorStream(true)
+                .start()
+
+            val output = process.inputStream
+                .bufferedReader()
+                .use { it.readText().trim() }
+
+            val exitCode = process.waitFor()
+
+            buildString {
+                append("Back display=$displayId")
+                append("\nExit code: $exitCode")
+                if (output.isNotEmpty()) {
+                    append("\n$output")
+                }
+            }
+        } catch (e: Exception) {
+            "Back failed: ${e.javaClass.simpleName}: ${e.message}"
+        }
     }
 
 }

@@ -29,7 +29,7 @@ import com.example.maophoneagent.infrastructure.controller.AccessibilityPhoneCon
 import com.example.maophoneagent.ui.screen.HomeScreen
 import com.example.maophoneagent.ui.theme.MaoPhoneAgentTheme
 import com.example.maophoneagent.ui.viewmodel.PhoneViewModel
-import com.example.maophoneagent.infrastructure.controller.ShizukuController
+import com.example.maophoneagent.infrastructure.shizuku.ShizukuController
 import com.example.maophoneagent.infrastructure.shizuku.ShizukuShellClient
 
 /**
@@ -141,8 +141,19 @@ class MainActivity : ComponentActivity() {
                             350, 300,
                             500
                         )
-                    }
+                    },
 
+                    onBackVirtualDisplay = { displayId ->
+                        shellClient.back(displayId)
+                    },
+
+                    onHomeVirtualDisplay = { displayId ->
+                        shellClient.home(displayId)
+                    },
+
+                    onLaunchVirtualApp = { displayId, packageName ->
+                        shellClient.launchApp(displayId, packageName)
+                    }
 
                 )
             }
