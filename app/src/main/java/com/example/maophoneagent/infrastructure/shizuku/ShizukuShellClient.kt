@@ -485,6 +485,51 @@ class ShizukuShellClient(
     }
 
     /**
+     * Executes a display-specific swipe and waits for the result for Agent tools.
+     *
+     * @param displayId The positive Android display ID; the main display is rejected.
+     * @param startX The non-negative starting horizontal coordinate in pixels.
+     * @param startY The non-negative starting vertical coordinate in pixels.
+     * @param endX The non-negative ending horizontal coordinate in pixels.
+     * @param endY The non-negative ending vertical coordinate in pixels.
+     * @param durationMs The duration from 1 to 10000 milliseconds.
+     * @return The remote shell command result.
+     */
+    suspend fun swipeForAgent(
+        displayId: Int,
+        startX: Int,
+        startY: Int,
+        endX: Int,
+        endY: Int,
+        durationMs: Int
+    ): String = withContext(Dispatchers.IO) {
+        require(displayId > 0) { "Main display is not allowed" }
+        require(listOf(startX, startY, endX, endY).all { it >= 0 }) { "Invalid swipe coordinates" }
+        require(durationMs in 1..10000) { "Invalid swipe duration" }
+        check(Shizuku.pingBinder()) { "Shizuku is not running" }
+        val service = checkNotNull(remoteService) { "Shell UserService is not connected" }
+        checkNotNull(service.swipe(displayId, startX, startY, endX, endY, durationMs)) {
+            "Remote swipe returned null"
+        }
+    }
+
+    /** Executes Home on a positive display ID and awaits the remote result. */
+    suspend fun homeForAgent(displayId: Int): String = withContext(Dispatchers.IO) {
+        require(displayId > 0) { "Main display is not allowed" }
+        check(Shizuku.pingBinder()) { "Shizuku is not running" }
+        val service = checkNotNull(remoteService) { "Shell UserService is not connected" }
+        checkNotNull(service.home(displayId)) { "Remote home returned null" }
+    }
+
+    /** Executes Back on a positive display ID and awaits the remote result. */
+    suspend fun backForAgent(displayId: Int): String = withContext(Dispatchers.IO) {
+        require(displayId > 0) { "Main display is not allowed" }
+        check(Shizuku.pingBinder()) { "Shizuku is not running" }
+        val service = checkNotNull(remoteService) { "Shell UserService is not connected" }
+        checkNotNull(service.back(displayId)) { "Remote back returned null" }
+    }
+
+    /**
      * Clears the remote interface and requests removal of the bound UserService.
      * Call this when the owning component no longer needs the client.
      */

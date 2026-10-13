@@ -3,7 +3,7 @@
  * Module: ui.screen
  *
  * Description:
- * Tests Observe and Tap through the same executor used by future AI tool calls.
+ * Tests observations, gestures, and navigation through the future AI tool executor.
  * Displays structured tool results, selectable UI JSON, and screenshot previews.
  */
 package com.example.maophoneagent.ui.screen
@@ -30,13 +30,18 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-/** Uses one executor for both tools; the test UI never dispatches shell actions directly. */
+/** Uses one executor for all tools; the test UI never dispatches shell actions directly. */
 @Composable
 fun AgentToolTest(executor: PhoneToolExecutor, accessibilityConnected: Boolean) {
     val scope = rememberCoroutineScope()
     var displayInput by remember { mutableStateOf("1") }
     var xInput by remember { mutableStateOf("350") }
     var yInput by remember { mutableStateOf("500") }
+    var startXInput by remember { mutableStateOf("350") }
+    var startYInput by remember { mutableStateOf("950") }
+    var endXInput by remember { mutableStateOf("350") }
+    var endYInput by remember { mutableStateOf("300") }
+    var durationInput by remember { mutableStateOf("500") }
     var delayInput by remember { mutableStateOf("0") }
     var busy by remember { mutableStateOf(false) }
     var status by remember { mutableStateOf("Ready") }
@@ -45,6 +50,11 @@ fun AgentToolTest(executor: PhoneToolExecutor, accessibilityConnected: Boolean) 
     val displayId = displayInput.toIntOrNull()
     val x = xInput.toIntOrNull()
     val y = yInput.toIntOrNull()
+    val startX = startXInput.toIntOrNull()
+    val startY = startYInput.toIntOrNull()
+    val endX = endXInput.toIntOrNull()
+    val endY = endYInput.toIntOrNull()
+    val durationMs = durationInput.toIntOrNull()
     val seconds = delayInput.toIntOrNull()
     val valid = !busy && displayId != null && displayId > 0 && seconds != null && seconds in 0..10
 
@@ -80,8 +90,8 @@ fun AgentToolTest(executor: PhoneToolExecutor, accessibilityConnected: Boolean) 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         HorizontalDivider()
         Text("Agent Tool Test", style = MaterialTheme.typography.titleMedium)
-        Text("Observe requires accessibility. Tap requires Shizuku permission and a connected Shell UserService.")
-        Text("Enter an existing virtual display ID greater than 0. Tap success reports command completion; verify the app's response on that display.")
+        Text("Observe requires accessibility. Tap, Swipe, Home, and Back require Shizuku permission and a connected Shell UserService.")
+        Text("Enter an existing virtual display ID greater than 0. Action success reports command completion; verify the app's response on that display.")
         OutlinedTextField(
             value = displayInput, onValueChange = { displayInput = it },
             label = { Text("Agent Display ID") }, singleLine = true, enabled = !busy
@@ -110,6 +120,53 @@ fun AgentToolTest(executor: PhoneToolExecutor, accessibilityConnected: Boolean) 
                     if (x != null && y != null) runTool(AgentToolCall.Tap(x, y))
                 }) { Text("Agent Tap") }
         }
+        // Swipe uses its own coordinates and the same session display and execution delay.
+        Text("Agent Swipe", style = MaterialTheme.typography.titleSmall)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedTextField(
+                value = startXInput, onValueChange = { startXInput = it },
+                label = { Text("Start X") }, modifier = Modifier.weight(1f),
+                singleLine = true, enabled = !busy
+            )
+            OutlinedTextField(
+                value = startYInput, onValueChange = { startYInput = it },
+                label = { Text("Start Y") }, modifier = Modifier.weight(1f),
+                singleLine = true, enabled = !busy
+            )
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedTextField(
+                value = endXInput, onValueChange = { endXInput = it },
+                label = { Text("End X") }, modifier = Modifier.weight(1f),
+                singleLine = true, enabled = !busy
+            )
+            OutlinedTextField(
+                value = endYInput, onValueChange = { endYInput = it },
+                label = { Text("End Y") }, modifier = Modifier.weight(1f),
+                singleLine = true, enabled = !busy
+            )
+        }
+        OutlinedTextField(
+            value = durationInput, onValueChange = { durationInput = it },
+            label = { Text("Swipe Duration in ms (1-10000)") }, singleLine = true, enabled = !busy
+        )
+        Button(
+            enabled = valid && startX != null && startX >= 0 && startY != null && startY >= 0 &&
+                endX != null && endX >= 0 && endY != null && endY >= 0 &&
+                durationMs != null && durationMs in 1..10000,
+            onClick = {
+                if (startX != null && startY != null && endX != null && endY != null && durationMs != null) {
+                    runTool(AgentToolCall.Swipe(startX, startY, endX, endY, durationMs))
+                }
+            }
+        ) { Text("Agent Swipe") }
+
+        // Navigation requests do not depend on the tap or swipe coordinate inputs.
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(enabled = valid, onClick = { runTool(AgentToolCall.Home) }) { Text("Agent Home") }
+            Button(enabled = valid, onClick = { runTool(AgentToolCall.Back) }) { Text("Agent Back") }
+        }
+
         if (busy) LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
         Text(status)
         result?.let { response ->

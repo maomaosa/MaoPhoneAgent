@@ -4,7 +4,7 @@
  *
  * Description:
  * Executes supported Agent tools against an application-selected secondary display.
- * Reads observations through PhoneObservationService and dispatches taps through Shizuku.
+ * Reads observations through PhoneObservationService and dispatches actions through Shizuku.
  * Serializes requests within this executor instance and returns structured results.
  */
 
@@ -27,7 +27,7 @@ import kotlinx.coroutines.sync.withLock
  * Unified execution entry point for Agent phone tools.
  *
  * @param observationService The service used to obtain UI JSON and screenshots.
- * @param shellClient The connected Shizuku client used for display-specific taps.
+ * @param shellClient The connected Shizuku client used for display-specific actions.
  * @param displayManager The Android display manager used to check target availability.
  */
 class PhoneToolExecutor(
@@ -44,7 +44,7 @@ class PhoneToolExecutor(
      * Expected operation failures are returned as results; coroutine cancellation propagates.
      *
      * @param session The application-selected target display context.
-     * @param call The Observe or Tap request to execute.
+     * @param call The observation, gesture, or navigation request to execute.
      * @return The tool result, or a validation failure if the display is unavailable.
      * @throws CancellationException If the calling coroutine is cancelled.
      */
@@ -75,6 +75,18 @@ class PhoneToolExecutor(
 
                 is AgentToolCall.Tap -> {
                     executeTap(displayId, call)
+                }
+
+                is AgentToolCall.Swipe -> {
+                    executeSwipe(displayId, call)
+                }
+
+                AgentToolCall.Home -> {
+                    shellResult("home", shellClient.homeForAgent(displayId))
+                }
+
+                AgentToolCall.Back -> {
+                    shellResult("back", shellClient.backForAgent(displayId))
                 }
             }
 
@@ -178,6 +190,30 @@ class PhoneToolExecutor(
             call.y
         )
 
+        return shellResult("tap", result)
+    }
+
+    /**
+     * Validates swipe parameters and awaits the Shizuku shell command result.
+     *
+     * @param displayId The validated positive Android display ID.
+     * @param call The start/end coordinates and duration supplied by the tool request.
+     * @return A Swipe result containing shell output or a parameter validation failure.
+     */
+    private suspend fun executeSwipe(displayId: Int, call: AgentToolCall.Swipe): AgentToolResult {
+        if (listOf(call.startX, call.startY, call.endX, call.endY).any { it < 0 } ||
+            call.durationMs !in 1..10000
+        ) {
+            return AgentToolResult("swipe", false, "Invalid swipe coordinates or duration")
+        }
+        val result = shellClient.swipeForAgent(
+            displayId, call.startX, call.startY, call.endX, call.endY, call.durationMs
+        )
+        return shellResult("swipe", result)
+    }
+
+    /** Converts the existing shell text response into a structured action result. */
+    private fun shellResult(toolName: String, result: String): AgentToolResult {
         // Parses the current text response; exit code 0 indicates command completion,
         // while the target app's visible response must be verified separately.
         val success = Regex(
@@ -185,7 +221,7 @@ class PhoneToolExecutor(
         ).containsMatchIn(result)
 
         return AgentToolResult(
-            toolName = "tap",
+            toolName = toolName,
             success = success,
             message = result
         )

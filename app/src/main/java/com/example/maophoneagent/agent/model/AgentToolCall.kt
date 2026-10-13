@@ -13,7 +13,7 @@ package com.example.maophoneagent.agent.model
 /**
  * Supported tool requests.
  *
- * Supports Observe and Tap. The sealed hierarchy allows the executor
+ * Supports Observe, Tap, Swipe, Home, and Back. The sealed hierarchy allows the executor
  * to handle every supported request explicitly.
  */
 sealed interface AgentToolCall {
@@ -35,6 +35,29 @@ sealed interface AgentToolCall {
         val x: Int,
         val y: Int
     ) : AgentToolCall
+
+    /**
+     * Requests a swipe between screen coordinates on the session's display.
+     *
+     * @property startX The non-negative starting horizontal coordinate in pixels.
+     * @property startY The non-negative starting vertical coordinate in pixels.
+     * @property endX The non-negative ending horizontal coordinate in pixels.
+     * @property endY The non-negative ending vertical coordinate in pixels.
+     * @property durationMs The duration from 1 to 10000 milliseconds. Defaults to 500.
+     */
+    data class Swipe(
+        val startX: Int,
+        val startY: Int,
+        val endX: Int,
+        val endY: Int,
+        val durationMs: Int = 500
+    ) : AgentToolCall
+
+    /** Requests Home navigation on the session's display through a shell key event. */
+    data object Home : AgentToolCall
+
+    /** Requests Back navigation on the session's display through a shell key event. */
+    data object Back : AgentToolCall
 }
 
 /**
@@ -42,7 +65,7 @@ sealed interface AgentToolCall {
  *
  * @property toolName The tool name or validation/error identifier supplied by the executor.
  * @property success True when at least one Observe artifact is available, or when
- * the Tap shell command reports exit code 0. This does not confirm an app's response.
+ * an action's shell command reports exit code 0. This does not confirm an app's response.
  * @property message The execution summary, shell output, or failure details.
  * @property uiJson The captured UI hierarchy JSON, or null when unavailable.
  * @property screenshotPath The local PNG cache path, or null when unavailable.
@@ -54,7 +77,7 @@ data class AgentToolResult(
     val success: Boolean,
     val message: String,
 
-    // Tap results and failed observations leave these fields at their defaults.
+    // Action results and failed observations leave these fields at their defaults.
     val uiJson: String? = null,
     val screenshotPath: String? = null,
     val nodeCount: Int = 0
