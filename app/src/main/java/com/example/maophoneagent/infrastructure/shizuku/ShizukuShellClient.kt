@@ -51,8 +51,8 @@ class ShizukuShellClient(
         .processNameSuffix("mao_shell")
         .tag("maophoneagent_shell")
         .daemon(false)
-        // Restarts an older UserService after adding the package listing AIDL method.
-        .version(11)
+        // Restarts an older UserService so display ID 1 uses the updated validation.
+        .version(12)
 
     // Converts the connected Binder into the AIDL interface and clears it on disconnect.
     private val connection = object : ServiceConnection {
@@ -159,7 +159,7 @@ class ShizukuShellClient(
      * Requests a tap on the target display using a background remote call.
      * Reports validation errors, command results, or Binder failure details.
      *
-     * @param displayId The target Android display ID greater than 1; IDs 0 and 1 are rejected.
+     * @param displayId The target Android display ID greater than 0; the main display (ID 0) is rejected.
      * @param x The non-negative horizontal coordinate in pixels.
      * @param y The non-negative vertical coordinate in pixels.
      */
@@ -175,7 +175,7 @@ class ShizukuShellClient(
             return
         }
 
-        if (displayId <= 1 || x < 0 || y < 0) {
+        if (displayId <= 0 || x < 0 || y < 0) {
             updateStatus("Invalid display or coordinates")
             return
         }
@@ -231,7 +231,7 @@ class ShizukuShellClient(
      * Requests a swipe on the target display using a background remote call.
      * Reports validation errors, command results, or execution errors.
      *
-     * @param displayId The target Android display ID greater than 1; IDs 0 and 1 are rejected.
+     * @param displayId The target Android display ID greater than 0; the main display (ID 0) is rejected.
      * @param x1 The non-negative starting horizontal coordinate in pixels.
      * @param y1 The non-negative starting vertical coordinate in pixels.
      * @param x2 The non-negative ending horizontal coordinate in pixels.
@@ -253,7 +253,7 @@ class ShizukuShellClient(
             return
         }
 
-        if (displayId <= 1 ||
+        if (displayId <= 0 ||
             listOf(x1, y1, x2, y2).any { it < 0 } ||
             durationMs !in 1..10000
         ) {
@@ -303,7 +303,7 @@ class ShizukuShellClient(
      * Requests Home on the target display using a background remote call.
      * Reports validation errors, command results, or execution errors.
      *
-     * @param displayId The target Android display ID greater than 1; IDs 0 and 1 are rejected.
+     * @param displayId The target Android display ID greater than 0; the main display (ID 0) is rejected.
      */
     fun home(displayId: Int) {
         val service = remoteService
@@ -313,7 +313,7 @@ class ShizukuShellClient(
             return
         }
 
-        if (displayId <= 1) {
+        if (displayId <= 0) {
             updateStatus("Invalid display ID: $displayId")
             return
         }
@@ -335,7 +335,7 @@ class ShizukuShellClient(
      * Requests Back on the target display using a background remote call.
      * Reports validation errors, command results, or execution errors.
      *
-     * @param displayId The target Android display ID greater than 1; IDs 0 and 1 are rejected.
+     * @param displayId The target Android display ID greater than 0; the main display (ID 0) is rejected.
      */
     fun back(displayId: Int) {
         val service = remoteService
@@ -345,7 +345,7 @@ class ShizukuShellClient(
             return
         }
 
-        if (displayId <= 1) {
+        if (displayId <= 0) {
             updateStatus("Invalid display ID: $displayId")
             return
         }
@@ -368,7 +368,7 @@ class ShizukuShellClient(
      * Requests an app launch on the target display using a background remote call.
      * Reports parameter errors and the remote command result on the main thread.
      *
-     * @param displayId The target Android display ID greater than 1.
+     * @param displayId The target Android display ID greater than 0.
      * @param packageName The installed app's package name, without surrounding whitespace.
      */
     fun launchApp(
@@ -383,7 +383,7 @@ class ShizukuShellClient(
         }
 
         // Matches the service-side validation before starting a background call.
-        if (displayId <= 1) {
+        if (displayId <= 0) {
             updateStatus("Invalid display ID: $displayId")
             return
         }

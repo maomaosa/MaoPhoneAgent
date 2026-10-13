@@ -54,7 +54,7 @@ class ShizukuShellUserService : IShellUserService.Stub() {
     /**
      * Executes a tap command on a specific display and waits for process exit.
      *
-     * @param displayId The target Android display ID greater than 1; IDs 0 and 1 are rejected.
+     * @param displayId The target Android display ID greater than 0; the main display (ID 0) is rejected.
      * @param x The non-negative horizontal coordinate in pixels.
      * @param y The non-negative vertical coordinate in pixels.
      * @return The tap description, exit code, and available command output,
@@ -67,8 +67,8 @@ class ShizukuShellUserService : IShellUserService.Stub() {
     ): String {
 
         // Prevent accidentally controlling the main screen.
-        // Reserves display IDs 0 and 1 under the current test policy.
-        if (displayId <= 1) {
+        // Rejects the main display (ID 0) for virtual display tests.
+        if (displayId <= 0) {
             return "Invalid displayId: $displayId"
         }
         // Rejects negative screen coordinates.
@@ -112,7 +112,7 @@ class ShizukuShellUserService : IShellUserService.Stub() {
     /**
      * Executes a swipe command on a specific display and waits for process exit.
      *
-     * @param displayId The target Android display ID greater than 1; IDs 0 and 1 are rejected.
+     * @param displayId The target Android display ID greater than 0; the main display (ID 0) is rejected.
      * @param x1 The non-negative starting horizontal coordinate in pixels.
      * @param y1 The non-negative starting vertical coordinate in pixels.
      * @param x2 The non-negative ending horizontal coordinate in pixels.
@@ -131,8 +131,8 @@ class ShizukuShellUserService : IShellUserService.Stub() {
     ): String {
 
         // Prevent accidentally controlling the main screen.
-        // Reserves display IDs 0 and 1 under the current test policy.
-        if (displayId <= 1) {
+        // Rejects the main display (ID 0) for virtual display tests.
+        if (displayId <= 0) {
             return "Invalid display ID"
         }
 
@@ -194,13 +194,13 @@ class ShizukuShellUserService : IShellUserService.Stub() {
     /**
      * Sends KEYCODE_HOME to the target display and waits for command completion.
      *
-     * @param displayId The target Android display ID greater than 1; IDs 0 and 1 are rejected.
+     * @param displayId The target Android display ID greater than 0; the main display (ID 0) is rejected.
      * @return The action description, exit code, and command output, or an error.
      */
     override fun home(displayId: Int): String {
         // Uses the same display restriction as tap and swipe.
-        // Reserves display IDs 0 and 1 under the current test policy.
-        if (displayId <= 1) {
+        // Rejects the main display (ID 0) for virtual display tests.
+        if (displayId <= 0) {
             return "Invalid display ID: $displayId"
         }
 
@@ -239,7 +239,7 @@ class ShizukuShellUserService : IShellUserService.Stub() {
      * Uses the Settings action for com.android.settings and the launcher intent
      * for other packages. The target display must exist and allow activity launches.
      *
-     * @param displayId The target Android display ID greater than 1.
+     * @param displayId The target Android display ID greater than 0.
      * @param packageName The installed app's package name.
      * @return The requested package and display, exit code, and combined output,
      * or a validation or execution error. Command completion alone does not
@@ -250,7 +250,7 @@ class ShizukuShellUserService : IShellUserService.Stub() {
         packageName: String
     ): String {
 
-        if (displayId <= 1) {
+        if (displayId <= 0) {
             return "Invalid display ID: $displayId"
         }
 
@@ -342,13 +342,13 @@ class ShizukuShellUserService : IShellUserService.Stub() {
     /**
      * Sends KEYCODE_BACK to the target display and waits for command completion.
      *
-     * @param displayId The target Android display ID greater than 1; IDs 0 and 1 are rejected.
+     * @param displayId The target Android display ID greater than 0; the main display (ID 0) is rejected.
      * @return The action description, exit code, and command output, or an error.
      */
     override fun back(displayId: Int): String {
         // Uses the same display restriction as tap and swipe.
-        // Reserves display IDs 0 and 1 under the current test policy.
-        if (displayId <= 1) {
+        // Rejects the main display (ID 0) for virtual display tests.
+        if (displayId <= 0) {
             return "Invalid display ID: $displayId"
         }
 

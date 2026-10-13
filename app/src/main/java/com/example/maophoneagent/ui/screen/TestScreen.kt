@@ -8,6 +8,7 @@
  * and trigger Android Back and Home navigation actions.
  * Displays accessibility service connection status and provides
  * a shortcut to system settings for enabling the service.
+ * Includes display-specific UI information and screenshot observation tests.
  *
  * Delegates action requests to PhoneViewModel and displays
  * the current execution status observed with lifecycle awareness.
@@ -215,6 +216,13 @@ fun TestScreen(
         )
 
         // ==========================================
+        // Accessibility Observation Test
+        // ==========================================
+
+        // UI controls and results are implemented in AccessibilityObservationTest.kt.
+        AccessibilityObservationTest(viewModel, accessibilityConnected)
+
+        // ==========================================
         // Shizuku Service Test
         // ==========================================
 
@@ -312,7 +320,7 @@ fun TestScreen(
             value = virtualDisplayId,
             onValueChange = { virtualDisplayId = it },
             label = { Text("Virtual Display ID") },
-            supportingText = { Text("Enter the actual display ID greater than 1.") },
+            supportingText = { Text("Enter the actual display ID greater than 0.") },
             singleLine = true
         )
 
@@ -342,7 +350,7 @@ fun TestScreen(
 
         Button(
             enabled = targetDisplayId != null &&
-                    targetDisplayId > 1 &&
+                    targetDisplayId > 0 &&
                     targetX != null &&
                     targetX >= 0 &&
                     targetY != null &&
@@ -378,10 +386,10 @@ fun TestScreen(
 
         // MainActivity supplies the predefined gesture through this callback.
         Button(
-            enabled = targetDisplayId != null && targetDisplayId > 1,
+            enabled = targetDisplayId != null && targetDisplayId > 0,
             onClick = {
                 val id = targetDisplayId
-                if (id != null && id > 1) {
+                if (id != null && id > 0) {
                     onSwipeVirtualDisplay(id)
                 }
             }
@@ -407,10 +415,10 @@ fun TestScreen(
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Button(
-                enabled = targetDisplayId != null && targetDisplayId > 1,
+                enabled = targetDisplayId != null && targetDisplayId > 0,
                 onClick = {
                     val id = targetDisplayId
-                    if (id != null && id > 1) {
+                    if (id != null && id > 0) {
                         onBackVirtualDisplay(id)
                     }
                 }
@@ -419,10 +427,10 @@ fun TestScreen(
             }
 
             Button(
-                enabled = targetDisplayId != null && targetDisplayId > 1,
+                enabled = targetDisplayId != null && targetDisplayId > 0,
                 onClick = {
                     val id = targetDisplayId
-                    if (id != null && id > 1) {
+                    if (id != null && id > 0) {
                         onHomeVirtualDisplay(id)
                     }
                 }
@@ -450,7 +458,7 @@ fun TestScreen(
         }
         val validPackage = packagePattern.matches(targetPackage)
 
-        Text("Uses the Virtual Display ID above (greater than 1).")
+        Text("Uses the Virtual Display ID above (greater than 0).")
 
         OutlinedTextField(
             value = virtualAppPackage,
@@ -463,10 +471,10 @@ fun TestScreen(
 
         // Validates input before delegating to the shell client through MainActivity.
         Button(
-            enabled = targetDisplayId != null && targetDisplayId > 1 && validPackage,
+            enabled = targetDisplayId != null && targetDisplayId > 0 && validPackage,
             onClick = {
                 val id = targetDisplayId
-                if (id != null && id > 1 && validPackage) {
+                if (id != null && id > 0 && validPackage) {
                     onLaunchVirtualApp(id, targetPackage)
                 }
             }

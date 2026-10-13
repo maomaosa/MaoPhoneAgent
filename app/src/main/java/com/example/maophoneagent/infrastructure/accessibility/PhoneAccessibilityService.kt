@@ -5,6 +5,8 @@
  * Description:
  * Performs phone interactions through Android Accessibility Services.
  * Supports tap and swipe gestures, along with Back and Home navigation.
+ * ScreenObservationReader uses this service for on-demand window information
+ * and display screenshots.
  *
  * Exposes the current service instance and connection state.
  * Gesture operations await completion callbacks and return failure
@@ -69,12 +71,13 @@ class PhoneAccessibilityService : AccessibilityService() {
     }
 
     /**
-     * Receives accessibility events without processing them at this stage.
+     * Receives accessibility events without continuously collecting screen content.
+     * Screen information is read on demand through ScreenObservationReader.
      *
      * @param event The accessibility event supplied by the system.
      */
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
-        // UI event processing is pending implementation.
+        // Observation is requested explicitly rather than triggered by every event.
     }
 
     /**
