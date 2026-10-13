@@ -1,3 +1,12 @@
+/*
+ * File: ShizukuShellClient.kt
+ * Module: infrastructure.shizuku
+ *
+ * Description:
+ * Connects to the shell UserService managed by Shizuku.
+ * Validates gesture requests and performs remote calls on background threads.
+ * Reports connection and command results through a main-thread callback.
+ */
 
 package com.example.maophoneagent.infrastructure.shizuku
 
@@ -13,8 +22,10 @@ import rikka.shizuku.Shizuku
 import android.util.Log
 
 /**
- * Connects MaoPhoneAgent to the privileged
- * Shell UserService managed by Shizuku.
+ * Connects MaoPhoneAgent to the shell UserService managed by Shizuku.
+ *
+ * @param context The context used to identify the UserService component.
+ * @param onStatusChanged The callback that receives status messages on the main thread.
  */
 class ShizukuShellClient(
     context: Context,
@@ -23,11 +34,14 @@ class ShizukuShellClient(
 
     private val mainHandler = Handler(Looper.getMainLooper())
 
+    // Makes connection updates visible to threads performing remote calls.
     @Volatile
     private var remoteService: IShellUserService? = null
 
+    // Tracks a binding request separately from an established remote connection.
     private var bound = false
 
+    // Uses a consistent configuration when binding and unbinding the service.
     private val serviceArgs = Shizuku.UserServiceArgs(
         ComponentName(
             context,
@@ -39,6 +53,7 @@ class ShizukuShellClient(
         .daemon(false)
         .version(8)
 
+    // Converts the connected Binder into the AIDL interface and clears it on disconnect.
     private val connection = object : ServiceConnection {
 
         override fun onServiceConnected(
@@ -65,7 +80,9 @@ class ShizukuShellClient(
     }
 
     /**
-     * Starts and connects to Shizuku UserService.
+     * Requests a connection to the Shizuku UserService after checking permission.
+     * Reports connection progress and errors through the status callback.
+     * The remote interface becomes available when the connection callback arrives.
      */
     fun connect() {
         if (!Shizuku.pingBinder()) {
@@ -111,7 +128,8 @@ class ShizukuShellClient(
     }
 
     /**
-     * Calls the remote service on a background thread.
+     * Runs the remote id diagnostic command on a background thread.
+     * Reports the command result or a connection or execution error.
      */
     fun runId() {
         val service = remoteService
@@ -138,7 +156,12 @@ class ShizukuShellClient(
 
 
     /**
-     * Executes a tap on the target virtual display.
+     * Requests a tap on the target display using a background remote call.
+     * Reports validation errors, command results, or Binder failure details.
+     *
+     * @param displayId The positive Android display ID; display 0 is rejected.
+     * @param x The non-negative horizontal coordinate in pixels.
+     * @param y The non-negative vertical coordinate in pixels.
      */
     fun tap(
         displayId: Int,
@@ -204,7 +227,72 @@ class ShizukuShellClient(
     }
 
 
+    /**
+     * Requests a swipe on the target display using a background remote call.
+     * Reports validation errors, command results, or execution errors.
+     *
+     * @param displayId The positive Android display ID; display 0 is rejected.
+     * @param x1 The non-negative starting horizontal coordinate in pixels.
+     * @param y1 The non-negative starting vertical coordinate in pixels.
+     * @param x2 The non-negative ending horizontal coordinate in pixels.
+     * @param y2 The non-negative ending vertical coordinate in pixels.
+     * @param durationMs The swipe duration in milliseconds, from 1 to 10000.
+     */
+    fun swipe(
+        displayId: Int,
+        x1: Int,
+        y1: Int,
+        x2: Int,
+        y2: Int,
+        durationMs: Int
+    ) {
+        val service = remoteService
 
+        if (service == null) {
+            updateStatus("Shell UserService not connected")
+            return
+        }
+
+        if (displayId <= 0 ||
+            listOf(x1, y1, x2, y2).any { it < 0 } ||
+            durationMs !in 1..10000
+        ) {
+            updateStatus("Invalid swipe parameters")
+            return
+        }
+
+        updateStatus("Executing virtual swipe...")
+
+        Thread {
+            try {
+                val result = service.swipe(
+                    displayId,
+                    x1, y1,
+                    x2, y2,
+                    durationMs
+                )
+
+                updateStatus(
+                    result ?: "Remote swipe returned null"
+                )
+
+            } catch (e: Exception) {
+                Log.e("MaoShell", "Swipe failed", e)
+
+                updateStatus(
+                    "Swipe failed: ${e.javaClass.simpleName}"
+                )
+            }
+        }.start()
+    }
+
+
+
+    /**
+     * Posts a status message to the callback on the main thread.
+     *
+     * @param message The connection status, command result, or error to report.
+     */
     private fun updateStatus(message: String) {
         mainHandler.post {
             onStatusChanged(message)
@@ -212,7 +300,8 @@ class ShizukuShellClient(
     }
 
     /**
-     * Releases the connection when Activity is destroyed.
+     * Clears the remote interface and requests removal of the bound UserService.
+     * Call this when the owning component no longer needs the client.
      */
     fun close() {
         remoteService = null

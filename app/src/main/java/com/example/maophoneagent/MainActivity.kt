@@ -132,6 +132,15 @@ class MainActivity : ComponentActivity() {
 
                     onTapVirtualDisplay = { displayId, x, y ->
                         shellClient.tap(displayId, x, y)
+                    },
+
+                    onSwipeVirtualDisplay = { displayId ->
+                        shellClient.swipe(
+                            displayId,
+                            350, 950,
+                            350, 300,
+                            500
+                        )
                     }
 
 

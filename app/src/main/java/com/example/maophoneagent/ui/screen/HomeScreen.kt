@@ -50,7 +50,8 @@ fun HomeScreen(
     shellTestStatus: String,
     onConnectShell: () -> Unit,
     onRunShellId: () -> Unit,
-    onTapVirtualDisplay: (Int, Int, Int) -> Unit
+    onTapVirtualDisplay: (Int, Int, Int) -> Unit,
+    onSwipeVirtualDisplay: (Int) -> Unit
 ) {
 
     // Observes the current operation status while the lifecycle is active.
@@ -350,6 +351,34 @@ fun HomeScreen(
             }
         ) {
             Text("Tap Virtual Display")
+        }
+
+        // ==========================================
+        // Virtual Display Swipe Test
+        // ==========================================
+
+        HorizontalDivider()
+
+        Text(
+            text = "Virtual Display Swipe Test",
+            style = MaterialTheme.typography.titleMedium
+        )
+
+        // Shares the display ID entered in the tap test above.
+        Text("Uses the Virtual Display ID above.")
+        Text("Swipe: (350, 950) to (350, 300), duration: 500 ms")
+
+        // MainActivity supplies the predefined gesture through this callback.
+        Button(
+            enabled = targetDisplayId != null && targetDisplayId > 0,
+            onClick = {
+                val id = targetDisplayId
+                if (id != null && id > 0) {
+                    onSwipeVirtualDisplay(id)
+                }
+            }
+        ) {
+            Text("Swipe Virtual Display")
         }
 
 
