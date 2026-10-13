@@ -32,6 +32,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.selection.SelectionContainer
 import com.example.maophoneagent.infrastructure.accessibility.PhoneAccessibilityService
+import com.example.maophoneagent.agent.tool.PhoneToolExecutor
 
 /**
  * Displays test controls for phone actions, shell operations, and their execution status.
@@ -59,7 +60,8 @@ fun TestScreen(
     // Requests an installed package on the selected virtual display.
     onLaunchVirtualApp: (Int, String) -> Unit,
     // Requests installed package names from the shell UserService.
-    onListInstalledPackages: () -> Unit
+    onListInstalledPackages: () -> Unit,
+    agentToolExecutor: PhoneToolExecutor
 ) {
 
     // Observes the current operation status while the lifecycle is active.
@@ -499,6 +501,13 @@ fun TestScreen(
         Button(onClick = onListInstalledPackages) {
             Text("List Installed Packages")
         }
+
+        // ==========================================
+        // Agent Tool Observation Test
+        // ==========================================
+
+        // Tests the Agent tool route separately from the existing direct shell buttons.
+        AgentToolTest(agentToolExecutor, accessibilityConnected)
 
 
     }

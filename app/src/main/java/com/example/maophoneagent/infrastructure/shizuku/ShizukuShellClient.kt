@@ -20,6 +20,8 @@ import android.os.Looper
 import com.example.maophoneagent.IShellUserService
 import rikka.shizuku.Shizuku
 import android.util.Log
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /**
  * Connects MaoPhoneAgent to the shell UserService managed by Shizuku.
@@ -443,6 +445,44 @@ class ShizukuShellClient(
         }.start()
     }
 
+    /**
+     * Executes a tap and waits for the result.
+     *
+     * Used by the AI Tool layer.
+     * Does not change the existing UI tap method.
+     */
+    suspend fun tapForAgent(
+        displayId: Int,
+        x: Int,
+        y: Int
+    ): String = withContext(Dispatchers.IO) {
+
+        require(displayId > 0) {
+            "Main display is not allowed"
+        }
+
+        require(x >= 0 && y >= 0) {
+            "Invalid tap coordinates"
+        }
+
+        check(Shizuku.pingBinder()) {
+            "Shizuku is not running"
+        }
+
+        val service = checkNotNull(remoteService) {
+            "Shell UserService is not connected"
+        }
+
+        val result: String? = service.tap(
+            displayId,
+            x,
+            y
+        )
+
+        checkNotNull(result) {
+            "Remote tap returned null"
+        }
+    }
 
     /**
      * Clears the remote interface and requests removal of the bound UserService.

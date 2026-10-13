@@ -31,6 +31,9 @@ import com.example.maophoneagent.ui.theme.MaoPhoneAgentTheme
 import com.example.maophoneagent.ui.viewmodel.PhoneViewModel
 import com.example.maophoneagent.infrastructure.shizuku.ShizukuController
 import com.example.maophoneagent.infrastructure.shizuku.ShizukuShellClient
+import android.hardware.display.DisplayManager
+import com.example.maophoneagent.agent.tool.PhoneToolExecutor
+import com.example.maophoneagent.application.service.PhoneObservationService
 
 /**
  * Hosts the phone action screen and provides its ViewModel dependencies.
@@ -103,6 +106,13 @@ class MainActivity : ComponentActivity() {
             shellTestStatus = message
         }
 
+        // Reuses one executor so Agent test requests share its execution mutex.
+        val agentToolExecutor = PhoneToolExecutor(
+            PhoneObservationService(),
+            shellClient,
+            getSystemService(DisplayManager::class.java)
+        )
+
         setContent {
             MaoPhoneAgentTheme {
                 TestScreen(
@@ -157,7 +167,9 @@ class MainActivity : ComponentActivity() {
 
                     onListInstalledPackages = {
                         shellClient.listInstalledPackages()
-                    }
+                    },
+
+                    agentToolExecutor = agentToolExecutor
 
                 )
             }
