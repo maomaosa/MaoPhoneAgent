@@ -33,6 +33,8 @@ import com.example.maophoneagent.infrastructure.shizuku.ShizukuController
 import com.example.maophoneagent.infrastructure.shizuku.ShizukuShellClient
 import android.hardware.display.DisplayManager
 import com.example.maophoneagent.agent.tool.PhoneToolExecutor
+import com.example.maophoneagent.agent.planner.ScriptedAgentPlanner
+import com.example.maophoneagent.agent.runtime.AgentRunner
 import com.example.maophoneagent.application.service.PhoneObservationService
 
 /**
@@ -113,6 +115,9 @@ class MainActivity : ComponentActivity() {
             getSystemService(DisplayManager::class.java)
         )
 
+        // The bound function executes tools through the existing shared executor.
+        val agentRunner = AgentRunner(ScriptedAgentPlanner(), agentToolExecutor::execute)
+
         setContent {
             MaoPhoneAgentTheme {
                 TestScreen(
@@ -169,7 +174,8 @@ class MainActivity : ComponentActivity() {
                         shellClient.listInstalledPackages()
                     },
 
-                    agentToolExecutor = agentToolExecutor
+                    agentToolExecutor = agentToolExecutor,
+                    agentRunner = agentRunner
 
                 )
             }
