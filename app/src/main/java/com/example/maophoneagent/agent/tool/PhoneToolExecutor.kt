@@ -15,6 +15,7 @@ import com.example.maophoneagent.agent.model.AgentSession
 import com.example.maophoneagent.agent.model.AgentToolCall
 import com.example.maophoneagent.agent.model.AgentToolResult
 import com.example.maophoneagent.application.service.PhoneObservationService
+import com.example.maophoneagent.application.service.PhoneInputService
 import com.example.maophoneagent.infrastructure.shizuku.ShizukuShellClient
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.TimeoutCancellationException
@@ -33,7 +34,8 @@ import kotlinx.coroutines.sync.withLock
 class PhoneToolExecutor(
     private val observationService: PhoneObservationService,
     private val shellClient: ShizukuShellClient,
-    private val displayManager: DisplayManager
+    private val displayManager: DisplayManager,
+    private val inputService: PhoneInputService = PhoneInputService()
 ) {
 
     // Serializes calls through this instance; direct UI or other executor calls are independent.
@@ -79,6 +81,20 @@ class PhoneToolExecutor(
 
                 is AgentToolCall.Swipe -> {
                     executeSwipe(displayId, call)
+                }
+
+                is AgentToolCall.InputText -> {
+                    val accepted = inputService.inputText(displayId, call.text)
+                    AgentToolResult("input_text", accepted,
+                        if (accepted) "Text replacement accepted on display=$displayId; observe to verify."
+                        else "Focused field rejected text replacement on display=$displayId")
+                }
+
+                AgentToolCall.SubmitInput -> {
+                    val accepted = inputService.submitInput(displayId)
+                    AgentToolResult("submit_input", accepted,
+                        if (accepted) "Editor submission accepted on display=$displayId; observe to verify."
+                        else "Focused field rejected submission; tap the visible search or submit button instead.")
                 }
 
                 AgentToolCall.Home -> {

@@ -43,6 +43,7 @@ fun AgentToolTest(executor: PhoneToolExecutor, accessibilityConnected: Boolean) 
     var endYInput by remember { mutableStateOf("300") }
     var durationInput by remember { mutableStateOf("500") }
     var packageInput by remember { mutableStateOf("com.android.settings") }
+    var textInput by remember { mutableStateOf("猫咪") }
     var delayInput by remember { mutableStateOf("0") }
     var busy by remember { mutableStateOf(false) }
     var status by remember { mutableStateOf("Ready") }
@@ -96,7 +97,7 @@ fun AgentToolTest(executor: PhoneToolExecutor, accessibilityConnected: Boolean) 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         HorizontalDivider()
         Text("Agent Tool Test", style = MaterialTheme.typography.titleMedium)
-        Text("Observe requires accessibility. Actions, app launches, and ListApps require Shizuku permission and a connected Shell UserService.")
+        Text("Observe and text input require accessibility. Gestures, navigation, app launches, and ListApps require Shizuku permission and a connected Shell UserService.")
         Text("Enter an existing virtual display ID greater than 0. Action success reports command completion; verify the app's response on that display.")
         OutlinedTextField(
             value = displayInput, onValueChange = { displayInput = it },
@@ -166,6 +167,22 @@ fun AgentToolTest(executor: PhoneToolExecutor, accessibilityConnected: Boolean) 
                 }
             }
         ) { Text("Agent Swipe") }
+
+        // Text input replaces the focused field on the selected display through accessibility.
+        Text("Agent Text Input", style = MaterialTheme.typography.titleSmall)
+        Text("Tap an editable field on the target display first. Input replaces its entire value; empty text clears it. Observe after input and submission to verify the result.")
+        OutlinedTextField(
+            value = textInput, onValueChange = { textInput = it },
+            label = { Text("Text to Enter") }, enabled = !busy,
+            isError = textInput.length > 2000,
+            supportingText = { Text("Supports Chinese and spaces; maximum 2000 characters.") }
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(enabled = valid && accessibilityConnected && textInput.length <= 2000,
+                onClick = { runTool(AgentToolCall.InputText(textInput)) }) { Text("Agent Input Text") }
+            Button(enabled = valid && accessibilityConnected,
+                onClick = { runTool(AgentToolCall.SubmitInput) }) { Text("Agent Submit Input") }
+        }
 
         // Navigation requests do not depend on the tap or swipe coordinate inputs.
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

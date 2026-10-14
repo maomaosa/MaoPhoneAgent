@@ -51,6 +51,7 @@ object OpenAppCompletion {
         val actionIndex = history.indexOfLast {
             when (it.call) {
                 is AgentToolCall.Tap, is AgentToolCall.Swipe, is AgentToolCall.LaunchApp,
+                is AgentToolCall.InputText, AgentToolCall.SubmitInput,
                 AgentToolCall.Home, AgentToolCall.Back -> true
                 else -> false
             }

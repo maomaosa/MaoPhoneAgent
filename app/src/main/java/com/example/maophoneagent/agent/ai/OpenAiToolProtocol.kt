@@ -32,6 +32,8 @@ object OpenAiToolProtocol {
             function("tap", "Tap a control at non-negative original screen pixel coordinates. For app-opening tasks, use launch_app first when the installed package is known; do not open the app drawer instead.", "x" to "integer", "y" to "integer"),
             function("swipe", "Swipe non-negative screen coordinates; durationMs must be 1-10000.",
                 "startX" to "integer", "startY" to "integer", "endX" to "integer", "endY" to "integer", "durationMs" to "integer"),
+            function("input_text", "Replace the entire text of the focused editable field on the selected display. Tap the field and observe focus first. Supports Unicode and spaces; empty text clears it. Maximum 2000 characters. Observe afterward to verify.", "text" to "string"),
+            function("submit_input", "Submit the focused editor's configured IME action, such as Search, Go, or Done. If unsupported, tap the visible search or submit button. Observe afterward to verify results."),
             function("home", "Send Home on the application-selected display."),
             function("back", "Send Back on the application-selected display."),
             function("launch_app", "First choice for opening a known installed app on the selected display. For Settings use com.android.settings if installed. Observe after launch to verify the screen.", "packageName" to "string"),
@@ -76,6 +78,13 @@ object OpenAiToolProtocol {
                 require(duration in 1..10000) { "Swipe duration must be 1-10000 ms" }
                 AgentToolCall.Swipe(integer("startX"), integer("startY"), integer("endX"), integer("endY"), duration)
             }
+            "input_text" -> {
+                fields("text")
+                val value = args.get("text")
+                require(value is String && value.length <= 2000) { "text must be a string of at most 2000 characters" }
+                AgentToolCall.InputText(value)
+            }
+            "submit_input" -> { fields(); AgentToolCall.SubmitInput }
             "home" -> { fields(); AgentToolCall.Home }
             "back" -> { fields(); AgentToolCall.Back }
             "list_apps" -> { fields(); AgentToolCall.ListApps }

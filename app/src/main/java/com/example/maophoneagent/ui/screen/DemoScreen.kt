@@ -81,7 +81,8 @@ fun DemoScreen(
             try {
                 val planner = OpenAiAgentPlanner(OpenAiClient(key), selectedModel)
                 val runner = AgentRunner(planner, executor::execute)
-                val outcome = runner.run(description, AgentSession(id), maxToolCalls = 12,
+                // Search tasks need several action/observation pairs beyond app launch.
+                val outcome = runner.run(description, AgentSession(id), maxToolCalls = 20,
                     timeoutMs = 180_000L) { message, history ->
                     steps = history
                     status = if (message == "Requesting next decision...") "正在分析下一步…"
@@ -204,6 +205,8 @@ private fun demoToolLabel(call: AgentToolCall): String = when (call) {
     is AgentToolCall.LaunchApp -> "打开应用 ${call.packageName}"
     is AgentToolCall.Tap -> "点击 (${call.x}, ${call.y})"
     is AgentToolCall.Swipe -> "滑动屏幕"
+    is AgentToolCall.InputText -> "输入文字 ${call.text}"
+    AgentToolCall.SubmitInput -> "提交输入 / 搜索"
     AgentToolCall.Home -> "返回桌面"
     AgentToolCall.Back -> "返回上一页"
 }

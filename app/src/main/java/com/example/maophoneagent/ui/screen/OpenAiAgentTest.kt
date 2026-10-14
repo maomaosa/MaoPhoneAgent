@@ -38,7 +38,7 @@ fun OpenAiAgentTest(executor: PhoneToolExecutor, accessibilityConnected: Boolean
     var model by remember { mutableStateOf("gpt-5.6-luna") }
     var task by remember { mutableStateOf("Open Settings on the target display") }
     var displayInput by remember { mutableStateOf("1") }
-    var limitInput by remember { mutableStateOf("6") }
+    var limitInput by remember { mutableStateOf("20") }
     var busy by remember { mutableStateOf(false) }
     var job by remember { mutableStateOf<Job?>(null) }
     var status by remember { mutableStateOf("Ready") }

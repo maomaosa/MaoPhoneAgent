@@ -25,7 +25,7 @@ class OpenAiToolProtocolTest {
 
     @Test fun schemasRejectExtraFieldsAndRequireDeclaredArguments() {
         val tools = OpenAiToolProtocol.tools()
-        assertEquals(8, tools.length())
+        assertEquals(10, tools.length())
         for (i in 0 until tools.length()) {
             val tool = tools.getJSONObject(i)
             assertTrue(tool.getBoolean("strict"))
@@ -33,6 +33,15 @@ class OpenAiToolProtocolTest {
             assertFalse(schema.getBoolean("additionalProperties"))
             assertEquals(schema.getJSONObject("properties").length(), schema.getJSONArray("required").length())
         }
+    }
+
+    @Test fun textInputPreservesUnicodeWhitespaceAndAllowsClearing() {
+        listOf("猫咪 视频 with spaces\nsecond line", "", "a".repeat(2000)).forEach { text ->
+            assertEquals(AgentDecision.CallTool(AgentToolCall.InputText(text)),
+                OpenAiToolProtocol.parse(response("input_text", JSONObject().put("text", text).toString())))
+        }
+        assertEquals(AgentDecision.CallTool(AgentToolCall.SubmitInput),
+            OpenAiToolProtocol.parse(response("submit_input", "{}")))
     }
 
     @Test fun rejectsInvalidCoordinatesAndUnexpectedTools() {
@@ -43,6 +52,11 @@ class OpenAiToolProtocolTest {
             response("tap", """{"x":1,"y":0,"displayId":0}"""),
             response("launch_app", """{"packageName":"com.app;id"}"""),
             response("swipe", """{"startX":0,"startY":0,"endX":1,"endY":1,"durationMs":0}"""),
+            response("input_text", "{}"),
+            response("input_text", """{"text":123}"""),
+            response("input_text", JSONObject().put("text", "a".repeat(2001)).toString()),
+            response("input_text", """{"text":"hello","displayId":0}"""),
+            response("submit_input", """{"text":"hello"}"""),
             response("shell", "{}")
         ).forEach { value ->
             try { OpenAiToolProtocol.parse(value); fail("Invalid decision accepted") }

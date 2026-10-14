@@ -13,7 +13,7 @@ package com.example.maophoneagent.agent.model
 /**
  * Supported tool requests.
  *
- * Supports observations, gestures, navigation, app launches, and package listing.
+ * Supports observations, gestures, text input, navigation, app launches, and package listing.
  * The sealed hierarchy allows the executor to handle every supported request explicitly.
  */
 sealed interface AgentToolCall {
@@ -53,6 +53,17 @@ sealed interface AgentToolCall {
         val durationMs: Int = 500
     ) : AgentToolCall
 
+    /**
+     * Replaces the entire value of the focused editable field on the session's display.
+     * Tap the field first. Empty text clears it; Unicode and spaces are preserved.
+     *
+     * @property text The replacement text, limited to 2000 characters.
+     */
+    data class InputText(val text: String) : AgentToolCall
+
+    /** Submits the focused editor's IME action; use Tap if the app exposes a submit button instead. */
+    data object SubmitInput : AgentToolCall
+
     /** Requests Home navigation on the session's display through a shell key event. */
     data object Home : AgentToolCall
 
@@ -80,7 +91,8 @@ sealed interface AgentToolCall {
  *
  * @property toolName The tool name or validation/error identifier supplied by the executor.
  * @property success True when at least one Observe artifact is available, or when
- * an action's shell command reports exit code 0. This does not confirm an app's response.
+ * an action's shell command reports exit code 0, or an accessibility editor action is accepted.
+ * This does not confirm an app's response.
  * @property message The execution summary, shell output, or failure details.
  * @property uiJson The captured UI hierarchy JSON, or null when unavailable.
  * @property screenshotPath The local PNG cache path, or null when unavailable.
