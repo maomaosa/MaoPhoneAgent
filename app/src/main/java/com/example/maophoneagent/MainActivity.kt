@@ -5,10 +5,10 @@
  * Description:
  * Provides the main activity for the MaoPhoneAgent application.
  * Connects the phone controller, application service, and ViewModel,
- * and displays TestScreen using the application theme.
+ * and displays the demo or test screen using the application theme.
  *
- * Currently uses MockPhoneController to verify operation calls
- * while actual device control is pending implementation.
+ * Uses accessibility for observation and primary-screen actions, and Shizuku
+ * for Agent operations on a selected secondary display.
  */
 
 package com.example.maophoneagent
@@ -16,6 +16,16 @@ package com.example.maophoneagent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.maophoneagent.ui.screen.DemoScreen
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.compose.runtime.getValue
@@ -24,7 +34,6 @@ import androidx.compose.runtime.setValue
 
 import com.example.maophoneagent.application.service.PhoneActionService
 import com.example.maophoneagent.domain.controller.PhoneController
-//import com.example.maophoneagent.infrastructure.controller.MockPhoneController
 import com.example.maophoneagent.infrastructure.controller.AccessibilityPhoneController
 import com.example.maophoneagent.ui.screen.TestScreen
 import com.example.maophoneagent.ui.theme.MaoPhoneAgentTheme
@@ -60,7 +69,7 @@ class MainActivity : ComponentActivity() {
                 override fun <T : ViewModel> create(modelClass: Class<T>): T {
                     require(modelClass.isAssignableFrom(PhoneViewModel::class.java))
 
-                    // Uses the temporary controller for verifying operation calls.
+                    // Uses the accessibility implementation for phone action tests.
                     val controller: PhoneController = AccessibilityPhoneController()
 
                     // Supplies the controller through the application service.
@@ -120,64 +129,84 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             MaoPhoneAgentTheme {
-                TestScreen(
-                    viewModel = phoneViewModel,
-
-                    // Existing Shizuku authorization UI.
-                    shizukuStatus = shizukuStatus,
-
-                    onRequestShizukuPermission = {
-                        shizukuController.requestPermission()
-                    },
-
-                    onRefreshShizukuStatus = {
-                        shizukuController.updateStatus()
-                    },
-
-                    // New Shell UserService test UI.
-                    shellTestStatus = shellTestStatus,
-
-                    onConnectShell = {
-                        shellClient.connect()
-                    },
-
-                    onRunShellId = {
-                        shellClient.runId()
-                    },
-
-                    onTapVirtualDisplay = { displayId, x, y ->
-                        shellClient.tap(displayId, x, y)
-                    },
-
-                    onSwipeVirtualDisplay = { displayId ->
-                        shellClient.swipe(
-                            displayId,
-                            350, 950,
-                            350, 300,
-                            500
-                        )
-                    },
-
-                    onBackVirtualDisplay = { displayId ->
-                        shellClient.back(displayId)
-                    },
-
-                    onHomeVirtualDisplay = { displayId ->
-                        shellClient.home(displayId)
-                    },
-
-                    onLaunchVirtualApp = { displayId, packageName ->
-                        shellClient.launchApp(displayId, packageName)
-                    },
-
-                    onListInstalledPackages = {
-                        shellClient.listInstalledPackages()
-                    },
-
-                    agentToolExecutor = agentToolExecutor,
-                    agentRunner = agentRunner
-
-                )
+                var showTests by remember { mutableStateOf(false) }
+                val shellConnected by shellClient.connected.collectAsStateWithLifecycle()
+                if (showTests) {
+                    BackHandler { showTests = false }
+                    Column(modifier = Modifier.fillMaxSize()) {
+                        TextButton(onClick = { showTests = false }) { Text("返回 Demo") }
+                        Box(modifier = Modifier.weight(1f)) {
+                            TestScreen(
+                                viewModel = phoneViewModel,
+            
+                                // Existing Shizuku authorization UI.
+                                shizukuStatus = shizukuStatus,
+            
+                                onRequestShizukuPermission = {
+                                    shizukuController.requestPermission()
+                                },
+            
+                                onRefreshShizukuStatus = {
+                                    shizukuController.updateStatus()
+                                },
+            
+                                // New Shell UserService test UI.
+                                shellTestStatus = shellTestStatus,
+            
+                                onConnectShell = {
+                                    shellClient.connect()
+                                },
+            
+                                onRunShellId = {
+                                    shellClient.runId()
+                                },
+            
+                                onTapVirtualDisplay = { displayId, x, y ->
+                                    shellClient.tap(displayId, x, y)
+                                },
+            
+                                onSwipeVirtualDisplay = { displayId ->
+                                    shellClient.swipe(
+                                        displayId,
+                                        350, 950,
+                                        350, 300,
+                                        500
+                                    )
+                                },
+            
+                                onBackVirtualDisplay = { displayId ->
+                                    shellClient.back(displayId)
+                                },
+            
+                                onHomeVirtualDisplay = { displayId ->
+                                    shellClient.home(displayId)
+                                },
+            
+                                onLaunchVirtualApp = { displayId, packageName ->
+                                    shellClient.launchApp(displayId, packageName)
+                                },
+            
+                                onListInstalledPackages = {
+                                    shellClient.listInstalledPackages()
+                                },
+            
+                                agentToolExecutor = agentToolExecutor,
+                                agentRunner = agentRunner
+            
+                            )
+                        }
+                    }
+                } else {
+                    DemoScreen(
+                        executor = agentToolExecutor,
+                        shizukuStatus = shizukuStatus,
+                        shellConnected = shellConnected,
+                        onRequestShizukuPermission = { shizukuController.requestPermission() },
+                        onRefreshShizukuStatus = { shizukuController.updateStatus() },
+                        onConnectShell = { shellClient.connect() },
+                        onOpenTests = { showTests = true }
+                    )
+                }
             }
         }
     }

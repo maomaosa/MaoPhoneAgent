@@ -22,6 +22,8 @@ import rikka.shizuku.Shizuku
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 /**
  * Connects MaoPhoneAgent to the shell UserService managed by Shizuku.
@@ -42,6 +44,10 @@ class ShizukuShellClient(
 
     // Tracks a binding request separately from an established remote connection.
     private var bound = false
+
+    private val _connected = MutableStateFlow(false)
+    /** Reports the UserService connection independently of command output. */
+    val connected = _connected.asStateFlow()
 
     // Uses a consistent configuration when binding and unbinding the service.
     private val serviceArgs = Shizuku.UserServiceArgs(
@@ -64,12 +70,15 @@ class ShizukuShellClient(
             binder: IBinder?
         ) {
             if (binder == null) {
+                _connected.value = false
                 updateStatus("UserService returned null Binder")
                 return
             }
 
             remoteService =
                 IShellUserService.Stub.asInterface(binder)
+
+            _connected.value = binder.isBinderAlive
 
             updateStatus("Shell UserService connected")
         }
@@ -78,6 +87,7 @@ class ShizukuShellClient(
             name: ComponentName?
         ) {
             remoteService = null
+            _connected.value = false
             updateStatus("Shell UserService disconnected")
         }
     }
@@ -101,11 +111,14 @@ class ShizukuShellClient(
                 return
             }
 
-            if (remoteService != null) {
+            if (remoteService?.asBinder()?.isBinderAlive == true) {
+                _connected.value = true
                 updateStatus("Shell UserService already connected")
                 return
             }
 
+            remoteService = null
+            _connected.value = false
             // Clear a previous connection before retrying.
             if (bound) {
                 Shizuku.unbindUserService(
@@ -564,6 +577,7 @@ class ShizukuShellClient(
      */
     fun close() {
         remoteService = null
+        _connected.value = false
 
         if (bound) {
             try {
