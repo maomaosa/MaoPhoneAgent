@@ -35,8 +35,19 @@ object OpenAiTaskContext {
                 .map { it.removePrefix("package:").trim() }
                 .filter { it.isNotEmpty() }.distinct().sorted().toList()
         } else emptyList()
+        // These are explicit known aliases, not labels extracted from package-manager output.
+        // Include a mapping only when its package actually appears in the installed list.
+        val knownApplications = JSONArray()
+
+        // add Package and its name to the aliases
+        if ("com.android.settings" in packages) {
+            knownApplications.put(JSONObject().put("packageName", "com.android.settings")
+                .put("aliases", JSONArray(listOf("Settings", "Android Settings", "设置", "系统设置"))))
+        }
+
         val apps = JSONObject().put("success", appResult?.success ?: false)
             .put("packages", JSONArray(packages))
+            .put("knownApplications", knownApplications)
             .put("message", if (appResult?.success == true) "${packages.size} installed packages" else
                 appResult?.message?.take(16000) ?: "Package list unavailable")
         val records = JSONArray(history.mapIndexed { index, step ->

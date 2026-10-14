@@ -29,12 +29,12 @@ object OpenAiToolProtocol {
         }
         return JSONArray(listOf(
             function("observe", "Read current UI and screenshot. Use after actions to verify the screen."),
-            function("tap", "Tap non-negative original screen pixel coordinates.", "x" to "integer", "y" to "integer"),
+            function("tap", "Tap a control at non-negative original screen pixel coordinates. For app-opening tasks, use launch_app first when the installed package is known; do not open the app drawer instead.", "x" to "integer", "y" to "integer"),
             function("swipe", "Swipe non-negative screen coordinates; durationMs must be 1-10000.",
                 "startX" to "integer", "startY" to "integer", "endX" to "integer", "endY" to "integer", "durationMs" to "integer"),
             function("home", "Send Home on the application-selected display."),
             function("back", "Send Back on the application-selected display."),
-            function("launch_app", "Launch an installed package on the selected display.", "packageName" to "string"),
+            function("launch_app", "First choice for opening a known installed app on the selected display. For Settings use com.android.settings if installed. Observe after launch to verify the screen.", "packageName" to "string"),
             function("list_apps", "List device-wide installed package names."),
             function("complete", "Finish only when the observed screen confirms task completion.", "message" to "string")
         ))

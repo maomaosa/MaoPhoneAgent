@@ -46,4 +46,17 @@ class OpenAiTaskContextTest {
         assertEquals(1, values.length())
         assertEquals("com.new.app", values.getString(0))
     }
+
+    @Test fun settingsAliasesAreProvidedOnlyForAnInstalledSettingsPackage() {
+        val present = OpenAiTaskContext.text("打开设置", listOf(observation,
+            apps(true, "package:com.android.settings"))).getJSONObject("installedApps")
+            .getJSONArray("knownApplications")
+        assertEquals(1, present.length())
+        assertEquals("com.android.settings", present.getJSONObject(0).getString("packageName"))
+        assertTrue(present.getJSONObject(0).getJSONArray("aliases").toString().contains("设置"))
+        val absent = OpenAiTaskContext.text("打开设置", listOf(observation,
+            apps(true, "package:com.other.app"))).getJSONObject("installedApps")
+            .getJSONArray("knownApplications")
+        assertEquals(0, absent.length())
+    }
 }
