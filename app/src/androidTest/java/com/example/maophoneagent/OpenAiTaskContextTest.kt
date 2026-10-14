@@ -20,6 +20,27 @@ class OpenAiTaskContextTest {
             AgentToolResult("home", true, "OK"))))
     }
 
+    @Test fun actionsRequireFollowUpObservationEvenWhenTheToolFails() {
+        listOf(AgentToolCall.Tap(1, 2), AgentToolCall.InputText("cats"), AgentToolCall.SubmitInput).forEach { call ->
+            listOf(true, false).forEach { success ->
+                val history = listOf(observation, AgentStep(call, AgentToolResult("action", success, "Result")))
+                assertEquals(AgentDecision.CallTool(AgentToolCall.Observe), OpenAiTaskContext.followUpObservation(history))
+            }
+        }
+        assertNull(OpenAiTaskContext.followUpObservation(listOf(observation)))
+        assertNull(OpenAiTaskContext.followUpObservation(listOf(apps(true, "package:com.app"))))
+    }
+
+    @Test fun progressContainsOnlyTheUnchangedActionCount() {
+        val action = AgentStep(AgentToolCall.SubmitInput, AgentToolResult("submit_input", true, "OK"))
+        val history = listOf(observation, action, observation, action, observation)
+        val progress = OpenAiTaskContext.text("Search cats", history).getJSONObject("executionProgress")
+        assertEquals(1, progress.length())
+        assertEquals(2, progress.getInt("unchangedAttemptsOfLastAction"))
+        val stale = OpenAiTaskContext.text("Search cats", history + action).getJSONObject("executionProgress")
+        assertEquals(0, stale.getInt("unchangedAttemptsOfLastAction"))
+    }
+
     @Test fun payloadContainsUiAndCompletePackageListBeyondSummaryLimit() {
         val names = (1..1200).map { "com.example.installedapp$it" }
         val context = OpenAiTaskContext.text("Open Settings", listOf(observation,

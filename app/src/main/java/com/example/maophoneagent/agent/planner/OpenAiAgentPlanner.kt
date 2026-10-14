@@ -17,6 +17,7 @@ import com.example.maophoneagent.agent.ai.OpenAiTaskContext
 import com.example.maophoneagent.agent.ai.OpenAppCompletion
 import com.example.maophoneagent.agent.model.*
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
@@ -28,6 +29,12 @@ class OpenAiAgentPlanner(private val client: OpenAiClient, private val model: St
     override suspend fun nextDecision(task: String, history: List<AgentStep>): AgentDecision {
         // Both prerequisites execute locally through the Runner and count toward its limit.
         OpenAiTaskContext.initialDecision(history)?.let { return it }
+        // Shell completion and editor acceptance do not mean the app has finished rendering.
+        // Enforces observation locally so the model cannot skip it and repeat clicks.
+        OpenAiTaskContext.followUpObservation(history)?.let {
+            delay(750)
+            return it
+        }
         return withContext(Dispatchers.IO) {
             val latest = history.lastOrNull { it.call == AgentToolCall.Observe }?.result
             val text = OpenAiTaskContext.text(task, history)
@@ -72,6 +79,12 @@ class OpenAiAgentPlanner(private val client: OpenAiClient, private val model: St
                     or tap a visible search button. If submit_input fails, observe and use the visible button instead.
                     After submission, observe and confirm the requested results before calling complete.
                     Merely opening the app or filling the search field does not complete a search task.
+                    Search completion means the app shows results for the requested query, not that a video was played.
+                    If relevant video result cards are already visible for that query, call complete immediately.
+                    The search button often remains visible on a results page; its presence does not mean search is pending.
+                    Do not repeatedly submit the same query to obtain identical results.
+                    If a loading indicator is visible, request observe again rather than clicking Search again.
+                    executionProgress.unchangedAttemptsOfLastAction counts attempts of the last action on unchanged UI; when positive, reassess completion or choose an evidence-based alternative before repeating it.
                     APP OPENING POLICY:
                     First resolve the app requested by the user against installedApps.packages and knownApplications aliases.
                     STOPPING POLICY:

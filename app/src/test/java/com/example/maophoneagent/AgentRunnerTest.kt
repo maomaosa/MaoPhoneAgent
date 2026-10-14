@@ -78,6 +78,26 @@ class AgentRunnerTest {
         assertTrue(outcome.message.contains("Tool call limit"))
     }
 
+    @Test fun unchangedUiStopsBeforeAThirdRepeatedTapWithoutClaimingCompletion() = runBlocking {
+        val tap = AgentToolCall.Tap(100, 200)
+        val planner = object : AgentPlanner {
+            override suspend fun nextDecision(task: String, history: List<AgentStep>) =
+                AgentDecision.CallTool(if (history.lastOrNull()?.call == AgentToolCall.Observe) tap else AgentToolCall.Observe)
+        }
+        var taps = 0
+        val runner = AgentRunner(planner) { _, call ->
+            if (call == tap) taps++
+            if (call == AgentToolCall.Observe) AgentToolResult("observe", true, "OK",
+                uiJson = """{"capturedAtEpochMs":$taps,"windows":[{"text":"cats results"}]}""")
+            else success(call)
+        }
+        val outcome = runner.run("Search cats", session, maxToolCalls = 20)
+        assertFalse(outcome.completed)
+        assertEquals(2, taps)
+        assertEquals(5, outcome.steps.size)
+        assertTrue(outcome.message.contains("Stopped repeated action"))
+    }
+
     @Test(timeout = 5000) fun taskTimeoutStopsWaitingForThePlanner() = runBlocking {
         val planner = object : AgentPlanner {
             override suspend fun nextDecision(task: String, history: List<AgentStep>): AgentDecision {

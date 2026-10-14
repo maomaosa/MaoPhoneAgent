@@ -11,6 +11,7 @@ package com.example.maophoneagent.agent.ai
 import com.example.maophoneagent.agent.model.AgentDecision
 import com.example.maophoneagent.agent.model.AgentStep
 import com.example.maophoneagent.agent.model.AgentToolCall
+import com.example.maophoneagent.agent.runtime.AgentLoopGuard
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -25,6 +26,12 @@ object OpenAiTaskContext {
         }
         return null
     }
+
+    /** Requires fresh visual evidence after any action, including a failed action. */
+    fun followUpObservation(history: List<AgentStep>): AgentDecision.CallTool? =
+        history.lastOrNull()?.takeIf { AgentLoopGuard.isAction(it.call) }?.let {
+            AgentDecision.CallTool(AgentToolCall.Observe)
+        }
 
     /** Preserves the complete package list separately from length-limited step summaries. */
     fun text(task: String, history: List<AgentStep>): JSONObject {
@@ -62,8 +69,15 @@ object OpenAiTaskContext {
                 .put("result", if (step.call == AgentToolCall.ListApps && step.result.success)
                     "See installedApps for package names" else step.result.message.take(16000))
         })
+        val action = history.lastOrNull { AgentLoopGuard.isAction(it.call) }
+        // History already describes the action; expose only its unchanged-UI attempt count.
+        val progress = JSONObject()
+            .put("unchangedAttemptsOfLastAction", action?.let {
+                AgentLoopGuard.repeatedActionCount(history, it.call)
+            } ?: 0)
         val latest = history.lastOrNull { it.call == AgentToolCall.Observe }?.result
         return JSONObject().put("task", task).put("history", records).put("installedApps", apps)
+            .put("executionProgress", progress)
             .put("latestUiJson", latest?.uiJson?.take(100000) ?: JSONObject.NULL)
     }
 }

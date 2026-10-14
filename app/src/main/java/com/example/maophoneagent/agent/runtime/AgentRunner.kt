@@ -73,6 +73,11 @@ class AgentRunner(
                         is AgentDecision.CallTool -> {
                             if (history.size >= maxToolCalls) {
                                 outcome = AgentRunResult(false, "Tool call limit reached ($maxToolCalls)", history.toList())
+                            } else if (AgentLoopGuard.repeatedActionCount(history, decision.call) >= 2) {
+                                // Reject the third identical action when two attempts left the UI unchanged.
+                                outcome = AgentRunResult(false,
+                                    "Stopped repeated action: ${decision.call}. Two attempts left the observed UI unchanged. Review the current screen before retrying; task completion was not confirmed.",
+                                    history.toList())
                             } else {
                                 onProgress("Executing step ${history.size + 1}: ${decision.call}", history.toList())
                                 val result = executeTool(session, decision.call)
