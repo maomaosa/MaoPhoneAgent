@@ -30,6 +30,18 @@ interface IShellUserService {
     // List installed package names, including packages without launcher activities.
     String listInstalledPackages() = 11;
 
+    // Create and retain one experimental virtual display in the Shell process.
+    String createVirtualDisplay(int width, int height, int densityDpi) = 12;
+
+    // Query the display owned by this service; does not enumerate external displays.
+    String getVirtualDisplayInfo() = 13;
+
+    // Release the display and its rendering resources.
+    String releaseVirtualDisplay() = 14;
+
+    // Return a bounded in-memory JPEG preview, or an empty array before rendering starts.
+    byte[] getVirtualDisplayPreview() = 15;
+
     // Reserved Shizuku service cleanup method.
     void destroy() = 16777114;
 }

@@ -12,7 +12,9 @@
 package com.example.maophoneagent.infrastructure.shizuku
 
 import androidx.annotation.Keep
+import android.content.Context
 import com.example.maophoneagent.IShellUserService
+import org.json.JSONObject
 
 /**
  * Runs in a separate process started by Shizuku.
@@ -21,7 +23,38 @@ import com.example.maophoneagent.IShellUserService
  * the Android shell identity (UID 2000).
  */
 @Keep
-class ShizukuShellUserService : IShellUserService.Stub() {
+class ShizukuShellUserService : IShellUserService.Stub {
+
+    private var virtualDisplay: ShellVirtualDisplay? = null
+
+    constructor() : super()
+
+    /** Shizuku API 13 supplies a context for service-owned Android resources. */
+    @Keep
+    constructor(context: Context) : super() {
+        virtualDisplay = ShellVirtualDisplay(context)
+    }
+
+    /** Creates a display without launching any app or changing the Agent session. */
+    override fun createVirtualDisplay(width: Int, height: Int, densityDpi: Int): String = displayOperation {
+        it.create(width, height, densityDpi)
+    }
+
+    /** Queries the display ID retained by this UserService instance. */
+    override fun getVirtualDisplayInfo(): String = displayOperation { it.info() }
+
+    /** Frees the service-owned virtual display and rendering surface. */
+    override fun releaseVirtualDisplay(): String = displayOperation { it.release() }
+
+    /** Returns the owned display's preview without reading or mirroring the main display. */
+    override fun getVirtualDisplayPreview(): ByteArray = virtualDisplay?.preview() ?: byteArrayOf()
+
+    private fun displayOperation(operation: (ShellVirtualDisplay) -> String): String = try {
+        operation(checkNotNull(virtualDisplay) { "Virtual display support requires a Shizuku API 13 Context constructor" })
+    } catch (e: Exception) {
+        val reason = if (e is java.lang.reflect.InvocationTargetException) e.targetException else e
+        JSONObject().put("success", false).put("message", "${reason.javaClass.simpleName}: ${reason.message}").toString()
+    }
 
     /**
      * Executes the fixed /system/bin/id command to inspect the process identity.
@@ -188,7 +221,11 @@ class ShizukuShellUserService : IShellUserService.Stub() {
      * Terminates this service process when Shizuku removes the UserService.
      */
     override fun destroy() {
-        System.exit(0)
+        try {
+            virtualDisplay?.release()
+        } finally {
+            System.exit(0)
+        }
     }
 
     /**

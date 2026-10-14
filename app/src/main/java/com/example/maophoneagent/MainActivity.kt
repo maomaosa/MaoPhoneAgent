@@ -45,6 +45,7 @@ import com.example.maophoneagent.agent.tool.PhoneToolExecutor
 import com.example.maophoneagent.agent.planner.ScriptedAgentPlanner
 import com.example.maophoneagent.agent.runtime.AgentRunner
 import com.example.maophoneagent.application.service.PhoneObservationService
+import com.example.maophoneagent.infrastructure.display.VirtualDisplayOverlayService
 
 /**
  * Hosts the phone action screen and provides its ViewModel dependencies.
@@ -191,7 +192,8 @@ class MainActivity : ComponentActivity() {
                                 },
             
                                 agentToolExecutor = agentToolExecutor,
-                                agentRunner = agentRunner
+                                agentRunner = agentRunner,
+                                shellClient = shellClient
             
                             )
                         }
@@ -222,7 +224,8 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
-        shellClient.close()
+        // Keep the shared Shell screen alive while its foreground preview service owns a binding.
+        shellClient.close(removeService = !VirtualDisplayOverlayService.running.value)
         super.onDestroy()
     }
 }

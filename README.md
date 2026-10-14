@@ -16,7 +16,7 @@
 | 用户与 Agent 同时使用设备 | AgentSession 固定为大于 0 的显示屏 ID，执行器检查屏幕是否存在 | 已有屏幕寻址约束；主屏持续操作时的焦点、IME 和性能隔离仍需专项验收 |
 | 结果可验证 | 动作后重新观察；简单打开应用任务有本地完成判断 | 多步任务仍由模型根据观察判断完成，尚无通用业务结果验证器 |
 | 用户主动交接 | 暂未实现专门的交接状态、通知和恢复流程 | 当前不应把支付、登录、验证码流程作为已支持能力 |
-| 实际执行画面 | 可用外部虚拟屏投屏工具展示 Agent 屏幕 | App 内的进度文字不能替代实际画面；本项目暂不创建或管理虚拟屏 |
+| 实际执行画面 | 外部副屏可投屏；内部虚拟屏在测试页提供只读画面预览 | 内部屏幕已验证 Settings 渲染和预览，完整 Agent 任务及焦点隔离仍需验证 |
 
 开发过程中已测试指定副屏打开 Settings、打开 Bilibili，以及在 Bilibili 中输入关键词并搜索。搜索任务曾出现重复提交，现已加入进度提示和循环保护
 
@@ -24,7 +24,7 @@
 
 ### 同一设备上的副屏，而非操作用户主屏
 
-主屏为用户保留，Agent 使用外部工具创建的第二块显示屏。App 启动和输入事件带上明确的 display ID；观察和文字输入也限定目标显示屏。
+主屏为用户保留，现有 Agent 测试使用外部工具创建的第二块显示屏，并新增了由 Shizuku UserService 创建内部屏幕的独立实验。App 启动和输入事件带上明确的 display ID；观察和文字输入也限定目标显示屏。
 
 ### Shizuku 执行动作，Accessibility 读取界面和操作输入框
 
@@ -181,7 +181,33 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 6. 返回 Demo，点击 Shizuku“连接 / 授权”，批准请求，再连接 UserService，确认无障碍和 UserService 均显示已连接。
 7. 在“AI 设置”中输入 API Key 和模型 ID。当前默认字符串为 `gpt-5.6-luna`，可改为账号实际可用且支持当前图像与工具调用方式的模型。
 
-本项目暂不创建副屏；关闭外部虚拟屏工具可能导致副屏及其活动被销毁，执行器会在下一次请求时检查屏幕是否仍存在。
+使用外部副屏时，关闭虚拟屏工具可能导致副屏及其活动被销毁，执行器会在下一次请求时检查屏幕是否仍存在。
+
+### 实验：直接在手机内部创建虚拟屏
+
+连接 Shizuku 和 UserService 后，进入“测试”，在页面顶部找到 **Internal Virtual Display Test**：
+
+1. 点击 **Create Internal Display**，在 Shell UserService 内创建 720 × 1280、240 dpi 的虚拟屏。
+2. 查看 **Display ID** 和 `Visible to app DisplayManager`，或点击 **Query Display ID** 查询状态。
+3. Android 13 及以上会启用受信任副屏和系统装饰；支持副屏桌面的系统可直接显示桌面。若系统没有对应桌面，点击 **Open Settings on This Display** 放入 App 内容。
+4. 开启 **Show Display Preview** 查看画面，点击 **Swipe Up** 验证画面随滑动更新，**Display Home** 返回副屏桌面。
+5. 重复创建会返回同一屏幕；**Release Display** 会停止浮窗并销毁副屏任务，避免将 Settings 等副屏内容迁移回主屏。UserService 退出时也会释放屏幕。
+
+该路径无需运行 scrcpy。`ShellVirtualDisplay` 持有 ImageReader 的 Surface，缓存最大 360 × 640、256 KiB 的 JPEG 预览；测试页和浮窗每 100 毫秒查询画面，最多约 10 次更新/秒，尚非视频编码投屏。预览仅供查看，不转发点击，也不是 Agent 的 Observe 接口。新增设备测试已在当前模拟器验证创建、正数 ID、App 可枚举、重复创建复用、Settings 渲染及释放后移除。
+
+Settings 启动是独立的手动测试按钮，不自动切换 AgentSession。Android 14 及以上启用副屏独立焦点，并在系统提供相应标志时禁止副屏抢占全局焦点。IME 策略、持续打字隔离和完整 Agent 任务仍需单独验收，预览编码性能也需要后续评估。
+
+### 浮窗预览
+
+在 **Internal Virtual Display Test** 中创建或查询内部屏幕后：
+
+1. 在 Demo 确认 `MaoPhoneAgent Control` 无障碍服务已连接。新版使用无障碍浮窗，不需要普通“显示在其他应用上层”权限。
+2. 点击 **Open Floating Preview**。Android 13 及以上会在需要时询问通知权限，用于显示前台预览服务的状态和关闭入口。
+3. 拖动标题移动浮窗；点击 **− / +** 收起或展开，点击 **×** 或 **Close Preview** 关闭。画面仅供查看，点击不会传递给虚拟屏。
+
+`VirtualDisplayOverlayService` 通过前台服务维护只读预览，从已授权的 `PhoneAccessibilityService` 获取 WindowManager 和窗口令牌，使用 `TYPE_ACCESSIBILITY_OVERLAY` 与 `FLAG_NOT_FOCUSABLE`。此前普通浮窗会被 Settings 的隐藏策略遮蔽，服务运行不代表画面可见。新版浮窗默认在右下方，可拖动、收起和关闭。离开测试页后仍可显示；关闭浮窗只解除自己的 Shell 连接，不释放内部屏幕。释放屏幕或断开无障碍服务会停止预览。
+
+回归测试按“先打开浮窗，再启动 Settings”的顺序，检查无障碍窗口实际可见、滑动后画面更新、关闭重开、Activity 关闭后的持续预览，以及释放副屏后主屏仍保持原页面。这些用例已在当前模拟器通过。主屏持续输入、目标 App 并发和设备兼容性仍需实测；前台服务只维护预览，AI 任务仍由现有 Demo 生命周期启动。
 
 ### 运行任务
 

@@ -59,8 +59,8 @@ class ShizukuShellClient(
         .processNameSuffix("mao_shell")
         .tag("maophoneagent_shell")
         .daemon(false)
-        // Restarts an older UserService to load the explicit Bilibili launch entry.
-        .version(13)
+        // Recreates old screens with destroy-on-removal and secondary-display configuration.
+        .version(16)
 
     // Converts the connected Binder into the AIDL interface and clears it on disconnect.
     private val connection = object : ServiceConnection {
@@ -571,11 +571,39 @@ class ShizukuShellClient(
         checkNotNull(service.listInstalledPackages()) { "Remote package listing returned null" }
     }
 
+    /** Creates a service-owned virtual display and returns its structured status JSON. */
+    suspend fun createVirtualDisplay(width: Int, height: Int, densityDpi: Int): String = withContext(Dispatchers.IO) {
+        check(Shizuku.pingBinder()) { "Shizuku is not running" }
+        val service = checkNotNull(remoteService) { "Shell UserService is not connected" }
+        checkNotNull(service.createVirtualDisplay(width, height, densityDpi)) { "Remote display creation returned null" }
+    }
+
+    /** Reads a small JPEG preview; an empty array means no rendered frame is available yet. */
+    suspend fun getVirtualDisplayPreview(): ByteArray = withContext(Dispatchers.IO) {
+        val service = checkNotNull(remoteService) { "Shell UserService is not connected" }
+        checkNotNull(service.getVirtualDisplayPreview()) { "Remote preview returned null" }
+    }
+
+    /** Queries the display retained by the connected UserService. */
+    suspend fun getVirtualDisplayInfo(): String = withContext(Dispatchers.IO) {
+        val service = checkNotNull(remoteService) { "Shell UserService is not connected" }
+        checkNotNull(service.getVirtualDisplayInfo()) { "Remote display query returned null" }
+    }
+
+    /** Releases only the virtual display created by this UserService. */
+    suspend fun releaseVirtualDisplay(): String = withContext(Dispatchers.IO) {
+        val service = checkNotNull(remoteService) { "Shell UserService is not connected" }
+        checkNotNull(service.releaseVirtualDisplay()) { "Remote display release returned null" }
+    }
+
     /**
      * Clears the remote interface and requests removal of the bound UserService.
      * Call this when the owning component no longer needs the client.
+     *
+     * @param removeService False when another owner, such as the floating preview,
+     * still needs the shared UserService and its virtual display.
      */
-    fun close() {
+    fun close(removeService: Boolean = true) {
         remoteService = null
         _connected.value = false
 
@@ -585,7 +613,7 @@ class ShizukuShellClient(
                     Shizuku.unbindUserService(
                         serviceArgs,
                         connection,
-                        true
+                        removeService
                     )
                 }
             } catch (_: Exception) {

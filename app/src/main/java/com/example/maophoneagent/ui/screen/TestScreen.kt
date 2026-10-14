@@ -34,6 +34,7 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import com.example.maophoneagent.infrastructure.accessibility.PhoneAccessibilityService
 import com.example.maophoneagent.agent.tool.PhoneToolExecutor
 import com.example.maophoneagent.agent.runtime.AgentRunner
+import com.example.maophoneagent.infrastructure.shizuku.ShizukuShellClient
 
 /**
  * Displays test controls for phone actions, shell operations, and their execution status.
@@ -63,7 +64,8 @@ fun TestScreen(
     // Requests installed package names from the shell UserService.
     onListInstalledPackages: () -> Unit,
     agentToolExecutor: PhoneToolExecutor,
-    agentRunner: AgentRunner
+    agentRunner: AgentRunner,
+    shellClient: ShizukuShellClient
 ) {
 
     // Observes the current operation status while the lifecycle is active.
@@ -91,6 +93,8 @@ fun TestScreen(
             text = "MaoPhoneAgent",
             style = MaterialTheme.typography.headlineMedium
         )
+
+        VirtualDisplayTest(shellClient)
 
         Text("Phone Controller Test")
 
