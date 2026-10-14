@@ -36,7 +36,7 @@ object OpenAiToolProtocol {
             function("back", "Send Back on the application-selected display."),
             function("launch_app", "First choice for opening a known installed app on the selected display. For Settings use com.android.settings if installed. Observe after launch to verify the screen.", "packageName" to "string"),
             function("list_apps", "List device-wide installed package names."),
-            function("complete", "Finish only when the observed screen confirms task completion.", "message" to "string")
+            function("complete", "End immediately when observation confirms the requested goal. For open-app-only tasks, seeing the target app open is enough; do not perform extra actions.", "message" to "string")
         ))
     }
 

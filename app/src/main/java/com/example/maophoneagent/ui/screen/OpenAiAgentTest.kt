@@ -35,7 +35,7 @@ fun OpenAiAgentTest(executor: PhoneToolExecutor, accessibilityConnected: Boolean
     if (context.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE == 0) return
     val scope = rememberCoroutineScope()
     var apiKey by remember { mutableStateOf("") }
-    var model by remember { mutableStateOf("gpt-4.1-mini") }
+    var model by remember { mutableStateOf("gpt-5.6-luna") }
     var task by remember { mutableStateOf("Open Settings on the target display") }
     var displayInput by remember { mutableStateOf("1") }
     var limitInput by remember { mutableStateOf("6") }
