@@ -59,8 +59,8 @@ class ShizukuShellClient(
         .processNameSuffix("mao_shell")
         .tag("maophoneagent_shell")
         .daemon(false)
-        // Restarts an older UserService so display ID 1 uses the updated validation.
-        .version(12)
+        // Restarts an older UserService to load the explicit Bilibili launch entry.
+        .version(13)
 
     // Converts the connected Binder into the AIDL interface and clears it on disconnect.
     private val connection = object : ServiceConnection {

@@ -236,8 +236,9 @@ class ShizukuShellUserService : IShellUserService.Stub() {
 
     /**
      * Requests an app launch through am start with an explicit target display.
-     * Uses the Settings action for com.android.settings and the launcher intent
-     * for other packages. The target display must exist and allow activity launches.
+     * Uses the Settings action for com.android.settings, the verified entry activity
+     * for Bilibili, and the launcher intent for other packages. The target display
+     * must exist and allow activity launches.
      *
      * @param displayId The target Android display ID greater than 0.
      * @param packageName The installed app's package name.
@@ -265,6 +266,7 @@ class ShizukuShellUserService : IShellUserService.Stub() {
 
         return try {
             // Keeps Settings resolution within the requested package.
+            // Bilibili uses the explicit entry activity verified on the installed device.
             // Other apps must expose an activity matching MAIN and LAUNCHER.
             val command = if (packageName == "com.android.settings") {
                 listOf(
@@ -276,6 +278,15 @@ class ShizukuShellUserService : IShellUserService.Stub() {
                     "android.settings.SETTINGS",
                     "-p",
                     packageName
+                )
+            } else if (packageName == "tv.danmaku.bili") {
+                listOf(
+                    "/system/bin/am",
+                    "start",
+                    "--display",
+                    displayId.toString(),
+                    "-n",
+                    "tv.danmaku.bili/.MainActivityV2"
                 )
             } else {
                 listOf(

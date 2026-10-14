@@ -45,6 +45,12 @@ object OpenAiTaskContext {
                 .put("aliases", JSONArray(listOf("Settings", "Android Settings", "设置", "系统设置"))))
         }
 
+        // Maps Bilibili names to the package verified on the installed device.
+        if ("tv.danmaku.bili" in packages) {
+            knownApplications.put(JSONObject().put("packageName", "tv.danmaku.bili")
+                .put("aliases", JSONArray(listOf("Bilibili", "bilibili", "哔哩哔哩", "B站"))))
+        }
+
         val apps = JSONObject().put("success", appResult?.success ?: false)
             .put("packages", JSONArray(packages))
             .put("knownApplications", knownApplications)
