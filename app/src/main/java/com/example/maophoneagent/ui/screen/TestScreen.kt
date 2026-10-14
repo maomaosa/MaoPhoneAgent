@@ -514,6 +514,9 @@ fun TestScreen(
         // Runs a complete scripted task through repeated planner/executor interactions.
         AgentRunnerTest(agentRunner, accessibilityConnected)
 
+        // Uses the same executor with a real OpenAI planner in debuggable builds.
+        OpenAiAgentTest(agentToolExecutor, accessibilityConnected)
+
 
     }
 }
